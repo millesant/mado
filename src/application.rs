@@ -4,6 +4,7 @@ use crate::{
         state::WindowState,
         window::{chatgpt_web_view, stop_app_web_views},
     },
+    downloads::DownloadController,
     platform::xdg::XdgDirectories,
     profiles::{ProfileId, storage::ProfilePaths},
 };
@@ -41,10 +42,11 @@ impl SimpleComponent for MadoApp {
             WindowState::default()
         });
 
-        let web_view = chatgpt_web_view(&paths);
-        let model = MadoApp {
-            browser_widget: wrap_with_recovery(&web_view),
-        };
+        let downloads = DownloadController::new();
+        let web_view = chatgpt_web_view(&paths, &downloads);
+        let browser_widget = wrap_with_recovery(&web_view);
+        browser_widget.add_overlay(&downloads.widget());
+        let model = MadoApp { browser_widget };
         let widgets = view_output!();
 
         root.set_default_size(window_state.width, window_state.height);

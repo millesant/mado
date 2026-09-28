@@ -14,9 +14,13 @@ use super::{
 
 pub const CHATGPT_URL: &str = "https://chatgpt.com/";
 
-pub fn chatgpt_web_view(paths: &crate::profiles::storage::ProfilePaths) -> WebView {
+pub fn chatgpt_web_view(
+    paths: &crate::profiles::storage::ProfilePaths,
+    downloads: &crate::downloads::DownloadController,
+) -> WebView {
     let session = create_profile_network_session(paths)
         .expect("failed to initialize persistent WebKit profile storage");
+    downloads.attach(&session);
     let web_view = WebView::builder().network_session(&session).build();
     configure_file_chooser(&web_view);
     configure_media_permissions(&web_view);

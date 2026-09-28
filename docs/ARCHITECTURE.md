@@ -85,7 +85,11 @@ No other subsystem should directly depend on ChatGPT DOM structure.
 Each profile receives an isolated persistent WebKit data/cache boundary. Switching profiles must never merge cookie/local-storage state.
 
 ### Downloads
-Normal WebKit downloads and synthetic `blob:`/`data:` downloads converge on one bounded native download model. Partial files must not appear as successful final downloads.
+`downloads/` owns the native download model and status surface. Each profile's WebKit `NetworkSession` feeds its `download-started` events into that controller.
+
+On the tested WebKitGTK 2.54 baseline, normal HTTP(S), real ChatGPT `blob:`, and explicit `data:` downloads all use WebKit's native `Download` stream. Mado therefore does not add a JavaScript/base64 synthetic-download bridge in P1. If a future WebKitGTK/ChatGPT combination requires one, it must live behind the web-integration boundary and use bounded/chunked messages rather than one giant payload.
+
+Server-suggested filenames are treated as untrusted. Mado sanitizes them, reserves unique final destinations in the user's Downloads directory, and gives WebKit a hidden sibling `.part` destination. Only WebKit's successful `finished` path promotes the partial file to its final name; failures discard the partial file. Download progress/completion/failure are reported through a small native GTK banner. Downloaded files are never automatically executed or opened.
 
 ### Diagnostics
 Diagnostics are read-only and sanitized by default. Never include cookies, session tokens, prompt text, or other sensitive page contents unless an explicit future feature defines safe opt-in behavior.

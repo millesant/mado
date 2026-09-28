@@ -47,11 +47,12 @@ DOM selectors and injected scripts live in the dedicated web-integration layer.
 File chooser requests are allowed only from an HTTPS ChatGPT/OpenAI page. Trusted requests use WebKitGTK's native GTK chooser; requests from other current page origins are cancelled.
 
 Treat filenames, MIME types, sizes, and bytes as untrusted.
-Normalize/sanitize suggested filenames.
-Prevent path traversal.
-Use bounded buffering/chunking.
-Write through temporary files and finalize atomically where practical.
-Do not automatically execute/open downloaded files.
+
+WebKit download suggestions never become filesystem paths directly. Mado removes path/control syntax, bounds filename length by UTF-8 bytes, reserves a unique destination under the user's Downloads directory, and downloads into a hidden same-directory `.part` file first. A failed/cancelled transfer removes the partial file; only successful completion renames it to the final filename.
+
+The tested WebKitGTK runtime streams HTTP(S), `blob:`, and `data:` downloads through the native download API, so Mado does not base64-serialize synthetic downloads. If a future fallback bridge becomes necessary, it must be bounded/chunked and stay behind the web-integration boundary.
+
+Downloaded files are never auto-executed or automatically launched.
 
 ## Permissions
 
