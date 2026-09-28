@@ -1,15 +1,29 @@
 use relm4::gtk::{self, glib, prelude::*};
 use webkit6::{WebView, prelude::*};
 
-use super::navigation::{is_allowed_popup_target, is_trusted_popup_source};
+use super::{
+    navigation::{is_allowed_popup_target, is_trusted_popup_source},
+    session::configure_cookie_persistence,
+};
 
 pub const CHATGPT_URL: &str = "https://chatgpt.com/";
 
 pub fn chatgpt_web_view() -> WebView {
+    configure_cookie_persistence().expect("failed to configure persistent WebKit cookies");
     let web_view = WebView::new();
     configure_popup_handling(&web_view);
     web_view.load_uri(CHATGPT_URL);
     web_view
+}
+
+pub fn stop_app_web_views(application: &gtk::Application) {
+    for window in application.windows() {
+        if let Some(child) = window.child()
+            && let Ok(web_view) = child.downcast::<WebView>()
+        {
+            web_view.stop_loading();
+        }
+    }
 }
 
 fn configure_popup_handling(web_view: &WebView) {

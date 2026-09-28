@@ -15,7 +15,7 @@ Profiles are isolation boundaries. Cookies, local storage, IndexedDB, service wo
 
 ## Authentication and cookies
 
-Prefer WebKit-managed persistent sessions.
+Prefer WebKit-managed persistent sessions. The P0 default shell configures WebKit's SQLite cookie store at `$XDG_DATA_HOME/mado/cookies.sqlite` (or `~/.local/share/mado/cookies.sqlite` when the XDG variable is unset); native code configures the store but does not read cookie contents.
 Do not extract, serialize, log, or manually shuttle authentication cookies unless a narrowly scoped feature explicitly requires it and receives a separate security review.
 
 Deleting a profile must delete only that profile's owned data.
