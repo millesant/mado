@@ -30,8 +30,16 @@ This document records durable compatibility findings. GitHub Issues track active
 - ChatGPT microphone capture triggered Mado's native permission prompt and worked after explicit approval; spoken input was transcribed/sent successfully before the experimental WebRTC toggle was tried.
 - Full ChatGPT Voice mode failed with `Voice couldn't connect`.
 - WebKitGTK 2.54 defaults `enable-media-stream` to true and `enable-webrtc` to false. Explicitly enabling `enable-webrtc` did not make full Voice connect and regressed the working dictation path, so that change was reverted.
+- Upstream WebKitGTK 2.54 release notes state that WebRTC support is disabled in 2.54 while the GStreamer backend is being replaced by a LibWebRTC implementation expected in the next release cycle. This explains why forcing the runtime setting cannot make ChatGPT Voice viable on this build. Reference: https://webkitgtk.org/2026/09/16/webkitgtk-2.54-highlights.html
 - The host exposes GStreamer WebRTC, Opus, SCTP, DTLS, and PipeWire audio elements. The remaining full-Voice incompatibility is tracked in #26.
 - No reachable camera flow was exercised in this smoke test. Media grants are not persisted by Mado in P0, so a later request/restart can prompt again.
+
+### Fedora 44 display smoke — issue #9
+
+- KDE Wayland: normal authenticated ChatGPT use across issues #6–#8 exercised prompt entry, streamed responses, follow-up interactions, uploads, downloads, and microphone dictation without immediate layout/input corruption.
+- X11 compatibility was exercised through KDE's XWayland server (`DISPLAY=:0`) by forcing `GDK_BACKEND=x11`.
+- The XWayland smoke rendered a 20-item streamed response followed by a second summarization turn with normal typing, clicking, scrolling, and layout.
+- An initial process sample during XWayland page startup showed one WebKit web process briefly using about 81% CPU and 768 MiB RSS; no sustained rendering/performance blocker was observed during the completed interaction.
 
 ## Gate matrix
 
@@ -43,7 +51,7 @@ This document records durable compatibility findings. GitHub Issues track active
 | session persists after restart | yes | Verified | Fedora 44 smoke; signed-in state remained across multiple restarts |
 | Google/Apple/Microsoft OAuth/new-window flow | yes | Verified | Google flow completed in an app-owned related child WebView |
 | Cloudflare challenge can complete without loops | yes | Verified | Challenge completed successfully before Google sign-in |
-| basic chat send/stream/render | yes | Unverified | |
+| basic chat send/stream/render | yes | Verified | Fedora 44 display smoke; multi-turn streamed responses rendered correctly on Wayland and XWayland |
 | file upload | yes | Verified | Fedora 44 transfer smoke; local text file uploaded and was readable by ChatGPT |
 | normal file download | yes | Verified | Fedora 44 transfer smoke; generated text file saved to the normal Downloads directory |
 | generated `blob:`/`data:` download feasibility | yes | Verified | Real ChatGPT `blob:` download and explicit `data:` probe both completed directly through WebKitGTK |
@@ -51,8 +59,8 @@ This document records durable compatibility findings. GitHub Issues track active
 | voice input / relevant WebRTC path | yes | Known limitation | Basic dictation worked; full ChatGPT Voice mode could not connect on WebKitGTK 2.54.0 and is tracked in #26 |
 | camera permission where ChatGPT requests it | no | Not exercised | No reachable camera flow was exposed during the issue #8 smoke test |
 | external links can hand off to system browser | yes | Unverified | |
-| Wayland smoke | yes | Unverified | |
-| X11 smoke | yes | Unverified | |
+| Wayland smoke | yes | Verified | Fedora 44 KDE Wayland host used throughout P0 interactive testing without immediate chat layout/input corruption |
+| X11 smoke | yes | Verified | Fedora 44 KDE XWayland (`GDK_BACKEND=x11`, `DISPLAY=:0`) multi-turn chat smoke passed |
 | page recovery after WebKit/load failure | no | Unverified | |
 
 ## P0 exit rule
