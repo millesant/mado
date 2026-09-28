@@ -7,10 +7,6 @@ use webkit6::{
 use super::navigation::is_trusted_web_origin;
 
 pub(crate) fn configure_media_permissions(web_view: &WebView) {
-    if let Some(settings) = WebViewExt::settings(web_view) {
-        settings.set_enable_webrtc(true);
-    }
-
     web_view.connect_permission_request(|web_view, request| {
         let Some(media_request) = request.downcast_ref::<UserMediaPermissionRequest>() else {
             return false;
