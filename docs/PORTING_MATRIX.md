@@ -21,8 +21,8 @@ It tracks architectural/behavioral parity only. GitHub Issues and the Project bo
 | `blob:` / `data:` download bridge | `web/scripts/downloads.js` + `downloads/` | P2 | bounded/chunked bridge |
 | OAuth/login popup handling | browser navigation/window policy | P0/P1 | must preserve login context |
 | microphone/camera permissions | `browser/permissions.rs` | P0/P1 | trusted-origin policy |
-| window frame persistence | `browser/state.rs` | P1 | Linux/Wayland-safe behavior |
-| single-instance lock | application activation | P1 | use Linux/GApplication semantics |
+| window frame persistence | `browser/state.rs` | P1 | profile-scoped size/maximized state only; no Wayland absolute positioning |
+| single-instance lock | application activation | P1 | Relm4/GTK GApplication uniqueness; second launch presents existing window |
 | Settings window | `settings/` | P2 | GTK/Relm4 native UI |
 | diagnostics window | `diagnostics/` | P2 | sanitized by default |
 | profile switcher | `profiles/` + GTK UI | P2 | preserve strict isolation |

@@ -114,6 +114,12 @@ $XDG_CACHE_HOME/mado/profiles/<id>/
 
 Each profile receives its own persistent WebKit `NetworkSession` using that profile's data/cache roots. Profile IDs are validated before they are used in paths, and profile deletion removes only the four directories owned by that profile.
 
+## Application lifecycle and window state
+
+Mado uses GTK/GApplication uniqueness through Relm4 rather than a secondary lockfile. A second launch activates and presents the existing application window.
+
+Main-window state is profile-scoped at `$XDG_STATE_HOME/mado/profiles/<id>/window-state`. Persist only width, height, and maximized state. Do not persist or restore absolute window coordinates: Wayland compositors own placement and do not provide a portable absolute-position contract.
+
 ## Threading
 
 GTK/Relm4/WebKit objects stay on the GLib main context unless their API explicitly supports otherwise.

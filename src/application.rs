@@ -3,7 +3,10 @@ use relm4::{RelmApp, gtk, prelude::*};
 use webkit6::WebView;
 
 use crate::{
-    browser::window::{chatgpt_web_view, stop_app_web_views},
+    browser::{
+        state::WindowState,
+        window::{chatgpt_web_view, stop_app_web_views},
+    },
     platform::xdg::XdgDirectories,
     profiles::{ProfileId, storage::ProfilePaths},
 };
@@ -21,7 +24,6 @@ impl SimpleComponent for MadoApp {
     view! {
         main_window = gtk::ApplicationWindow {
             set_title: Some("Mado"),
-            set_default_size: (1280, 900),
             set_child: Some(&model.web_view),
         }
     }
@@ -32,19 +34,46 @@ impl SimpleComponent for MadoApp {
         _sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let paths = ProfilePaths::new(&XdgDirectories::discover(), &profile);
+        paths
+            .prepare()
+            .expect("failed to initialize profile state directories");
+        let window_state = WindowState::load(&paths.window_state_file()).unwrap_or_else(|error| {
+            eprintln!("failed to load window state: {error}");
+            WindowState::default()
+        });
+
         let model = MadoApp {
             web_view: chatgpt_web_view(&paths),
         };
-        root.connect_close_request(move |_| {
+        let widgets = view_output!();
+
+        root.set_default_size(window_state.width, window_state.height);
+        if window_state.maximized {
+            root.maximize();
+        }
+
+        let window_state_file = paths.window_state_file();
+        root.connect_close_request(move |window| {
+            if let Err(error) = WindowState::capture(window).save(&window_state_file) {
+                eprintln!("failed to save window state: {error}");
+            }
             stop_app_web_views(&relm4::main_application());
             gtk::glib::Propagation::Proceed
         });
-        let widgets = view_output!();
 
         ComponentParts { model, widgets }
     }
 }
 
 pub fn run(profile: ProfileId) {
-    RelmApp::new("io.github.Millesant.Mado").run::<MadoApp>(profile);
+    let app = RelmApp::new("io.github.Millesant.Mado");
+    app.allow_multiple_instances(false);
+
+    relm4::main_application().connect_activate(|application| {
+        if let Some(window) = application.active_window() {
+            window.present();
+        }
+    });
+
+    app.run::<MadoApp>(profile);
 }

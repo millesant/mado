@@ -50,6 +50,10 @@ impl ProfilePaths {
         self.data.join("cookies.sqlite")
     }
 
+    pub(crate) fn window_state_file(&self) -> PathBuf {
+        self.state.join("window-state")
+    }
+
     #[allow(dead_code)]
     pub(crate) fn remove_owned_data(&self) -> io::Result<()> {
         for path in [&self.config, &self.data, &self.state, &self.cache] {
@@ -117,6 +121,10 @@ mod tests {
         assert_eq!(
             paths.cookie_database(),
             root.join("data/profiles/work/cookies.sqlite")
+        );
+        assert_eq!(
+            paths.window_state_file(),
+            root.join("state/profiles/work/window-state")
         );
     }
 
