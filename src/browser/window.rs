@@ -21,7 +21,13 @@ pub fn chatgpt_web_view(
     let session = create_profile_network_session(paths)
         .expect("failed to initialize persistent WebKit profile storage");
     downloads.attach(&session);
-    let web_view = WebView::builder().network_session(&session).build();
+
+    let user_content_manager = crate::web::bridge::create_user_content_manager()
+        .expect("failed to initialize isolated web-integration bridge");
+    let web_view = WebView::builder()
+        .network_session(&session)
+        .user_content_manager(&user_content_manager)
+        .build();
     configure_file_chooser(&web_view);
     configure_media_permissions(&web_view);
     configure_navigation_policy(&web_view);
@@ -70,7 +76,11 @@ fn configure_popup_handling(web_view: &WebView) {
             PopupDisposition::Deny => return None,
         }
 
-        let popup = WebView::builder().related_view(parent).build();
+        let mut popup_builder = WebView::builder().related_view(parent);
+        if let Some(user_content_manager) = parent.user_content_manager() {
+            popup_builder = popup_builder.user_content_manager(&user_content_manager);
+        }
+        let popup = popup_builder.build();
         configure_file_chooser(&popup);
         configure_media_permissions(&popup);
         configure_navigation_policy(&popup);

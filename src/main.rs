@@ -3,6 +3,7 @@ mod browser;
 mod downloads;
 mod platform;
 mod profiles;
+mod web;
 
 fn main() {
     let profile = match profiles::selected_profile() {

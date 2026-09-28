@@ -33,14 +33,11 @@ Unknown/custom schemes are denied rather than blindly launched.
 
 ## JavaScript/native bridge
 
-Bridge messages require:
-- an explicit message schema;
-- origin/context validation where the platform allows it;
-- size limits;
-- strict command allow-listing;
-- no arbitrary filesystem paths or shell execution.
+Mado's WebKitGTK bridge is not exposed as a generic page-to-native command API. The registered handler lives in the isolated `mado-web-integration-v1` script world, and the bootstrap user script is injected into the top frame only with an HTTPS ChatGPT/OpenAI URI allow-list. This compensates for WebKitGTK's `script-message-received` callback not carrying Swift-style frame/security-origin metadata: ordinary page JavaScript and third-party OAuth provider pages do not receive the isolated-world handler.
 
-DOM selectors and injected scripts live in the dedicated web-integration layer.
+Bridge messages are UTF-8 JSON strings with an explicit protocol version, event type, and closed payload schema. Native parsing enforces a 16 KiB maximum before JSON decoding, rejects unknown versions and event types, and rejects extra or malformed payload fields. JavaScript applies the same byte limit before posting. The initial protocol exposes only the `bridge_ready` event; future features must add explicit typed events rather than an eval/shell/filesystem command mechanism.
+
+DOM selectors and injected scripts live only in `src/web/`. DOM observers must use the shared page guard: Cloudflare challenge pages and auth-like pages suppress incompatible observers. Never log raw bridge payloads, because future event payloads may contain user-derived page state.
 
 ## Uploads and downloads
 
