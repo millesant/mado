@@ -29,6 +29,7 @@ swift/.swiftpm/
 swift/dist/
 
 # Node / Tauri / Rust
+target/
 tauri/node_modules/
 tauri/dist/
 tauri/backups/

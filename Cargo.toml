@@ -1,0 +1,10 @@
+[package]
+name = "mado"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+
+[dependencies]
+gtk4 = { version = "0.11", features = ["v4_10"] }
+relm4 = "0.11.0"
+webkit6 = "0.6.1"
