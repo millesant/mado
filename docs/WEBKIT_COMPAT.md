@@ -15,6 +15,15 @@ This document records durable compatibility findings. GitHub Issues track active
 - Manual evidence: native Mado window opened, `https://chatgpt.com/` rendered to the signed-out ChatGPT UI, and closing the window returned to the shell with no lingering Mado/WebKit helper process.
 - One credential-socket `Broken pipe` warning was observed during shutdown on this host; after commit `1de52c2`, the repeated WebKit `internallyFailedLoadTimerFired()` shutdown errors no longer occurred.
 
+### Fedora 44 transfer smoke — issue #7
+
+- Same Fedora 44 / GTK 4.22.5 / WebKitGTK 2.54.0 / KDE Wayland host.
+- A local text file selected through WebKitGTK's native file chooser uploaded successfully to ChatGPT and was readable by the model.
+- A ChatGPT-generated text file downloaded successfully to the user's normal Downloads directory using WebKitGTK's built-in download behavior.
+- Temporary scheme-only instrumentation confirmed the real ChatGPT-generated download used a `blob:` URL and completed successfully.
+- A temporary local compatibility probe confirmed an explicit `data:` download also completed successfully and wrote the expected file contents.
+- No native synthetic-download bridge is required for the tested `blob:` / `data:` paths. Final download progress/history UI remains out of scope for this compatibility gate.
+
 ## Gate matrix
 
 | Capability | Required for P0 exit | Current state | Evidence |
@@ -26,9 +35,9 @@ This document records durable compatibility findings. GitHub Issues track active
 | Google/Apple/Microsoft OAuth/new-window flow | yes | Verified | Google flow completed in an app-owned related child WebView |
 | Cloudflare challenge can complete without loops | yes | Verified | Challenge completed successfully before Google sign-in |
 | basic chat send/stream/render | yes | Unverified | |
-| file upload | yes | Unverified | |
-| normal file download | yes | Unverified | |
-| generated `blob:`/`data:` download feasibility | yes | Unverified | |
+| file upload | yes | Verified | Fedora 44 transfer smoke; local text file uploaded and was readable by ChatGPT |
+| normal file download | yes | Verified | Fedora 44 transfer smoke; generated text file saved to the normal Downloads directory |
+| generated `blob:`/`data:` download feasibility | yes | Verified | Real ChatGPT `blob:` download and explicit `data:` probe both completed directly through WebKitGTK |
 | microphone permission | yes | Unverified | |
 | voice input / relevant WebRTC path | yes | Unverified | |
 | camera permission where ChatGPT requests it | no | Unverified | |
