@@ -54,7 +54,9 @@ Do not automatically execute/open downloaded files.
 
 ## Permissions
 
-Microphone/camera requests are allowed only for explicitly trusted ChatGPT/OpenAI origins and require user-visible permission behavior.
+Microphone/camera requests are handled only while the current WebView is on an explicitly trusted HTTPS ChatGPT/OpenAI origin. Every WebKit user-media request still requires an explicit native GTK confirmation; Mado does not blanket-grant capture access.
+
+WebKitGTK 6's public `UserMediaPermissionRequest` API reports whether audio and/or video was requested but does not expose the exact requesting subframe origin. The P0 policy therefore validates the top-level WebView origin and keeps the user confirmation as a second boundary. If a future WebKitGTK API exposes the initiating security origin, prefer that more precise check.
 
 Prefer desktop portals for host integration where appropriate, especially under Flatpak/Wayland.
 

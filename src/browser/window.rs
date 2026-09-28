@@ -3,6 +3,7 @@ use webkit6::{WebView, prelude::*};
 
 use super::{
     navigation::{is_allowed_popup_target, is_trusted_web_origin},
+    permissions::configure_media_permissions,
     session::configure_cookie_persistence,
     transfers::configure_file_chooser,
 };
@@ -13,6 +14,7 @@ pub fn chatgpt_web_view() -> WebView {
     configure_cookie_persistence().expect("failed to configure persistent WebKit cookies");
     let web_view = WebView::new();
     configure_file_chooser(&web_view);
+    configure_media_permissions(&web_view);
     configure_popup_handling(&web_view);
     web_view.load_uri(CHATGPT_URL);
     web_view
@@ -40,6 +42,7 @@ fn configure_popup_handling(web_view: &WebView) {
 
         let popup = WebView::builder().related_view(parent).build();
         configure_file_chooser(&popup);
+        configure_media_permissions(&popup);
         configure_popup_handling(&popup);
 
         let window = gtk::ApplicationWindow::builder()
