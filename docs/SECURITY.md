@@ -26,9 +26,9 @@ Maintain an explicit trusted-origin policy for ChatGPT/OpenAI authentication flo
 
 WebKit new-window requests may create an in-app child view only when the opener is an HTTPS ChatGPT/OpenAI origin. The initial child target must be HTTPS (or `about:blank` while WebKit bootstraps the popup), and the child must use WebKit's related-view relationship so authentication state remains WebKit-owned and shared with its opener.
 
-Ordinary external links should open through the system browser unless an issue deliberately defines in-app handling.
+User-initiated third-party HTTPS navigations from a trusted ChatGPT/OpenAI page are handed to the Linux default browser through GIO. Non-user HTTP(S) redirects remain embedded so authentication flows can continue, and trusted ChatGPT/OpenAI destinations stay in-app.
 
-Unknown custom schemes must not be blindly launched.
+Unknown/custom schemes are denied rather than blindly launched.
 
 ## JavaScript/native bridge
 
