@@ -21,10 +21,10 @@ This document records durable compatibility findings. GitHub Issues track active
 |---|---:|---|---|
 | launch native GTK/Relm4 shell | yes | Verified | Fedora 44 host smoke above; clean process exit after `1de52c2` |
 | load `https://chatgpt.com` | yes | Verified | Fedora 44 host smoke above; current signed-out ChatGPT UI rendered in WebKitGTK 6 |
-| interactive login | yes | Unverified | |
-| session persists after restart | yes | Unverified | |
-| Google/Apple/Microsoft OAuth/new-window flow | yes | Unverified | |
-| Cloudflare challenge can complete without loops | yes | Unverified | |
+| interactive login | yes | Verified | Fedora 44 smoke; Google sign-in completed |
+| session persists after restart | yes | Verified | Fedora 44 smoke; signed-in state remained across multiple restarts |
+| Google/Apple/Microsoft OAuth/new-window flow | yes | Verified | Google flow completed in an app-owned related child WebView |
+| Cloudflare challenge can complete without loops | yes | Verified | Challenge completed successfully before Google sign-in |
 | basic chat send/stream/render | yes | Unverified | |
 | file upload | yes | Unverified | |
 | normal file download | yes | Unverified | |
