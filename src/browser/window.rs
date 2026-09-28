@@ -2,7 +2,10 @@ use relm4::gtk::{self, glib, prelude::*};
 use webkit6::{WebView, prelude::*};
 
 use super::{
-    navigation::{configure_navigation_policy, is_allowed_popup_target, is_trusted_web_origin},
+    navigation::{
+        PopupDisposition, classify_popup_target, configure_navigation_policy,
+        is_trusted_web_origin, open_external_uri,
+    },
     permissions::configure_media_permissions,
     session::configure_cookie_persistence,
     transfers::configure_file_chooser,
@@ -36,9 +39,17 @@ fn configure_popup_handling(web_view: &WebView) {
         if !is_trusted_web_origin(parent.uri().as_deref()) {
             return None;
         }
-        let target = action.request().and_then(|request| request.uri());
-        if !target.as_deref().is_some_and(is_allowed_popup_target) {
+        let Some(target) = action.request().and_then(|request| request.uri()) else {
             return None;
+        };
+
+        match classify_popup_target(target.as_str()) {
+            PopupDisposition::ChildWebView => {}
+            PopupDisposition::External => {
+                open_external_uri(target.as_str());
+                return None;
+            }
+            PopupDisposition::Deny => return None,
         }
 
         let popup = WebView::builder().related_view(parent).build();

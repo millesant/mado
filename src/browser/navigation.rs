@@ -36,12 +36,7 @@ pub(crate) fn configure_navigation_policy(web_view: &WebView) {
             NavigationDisposition::Embedded => false,
             NavigationDisposition::External => {
                 decision.ignore();
-                if let Err(error) = gio::AppInfo::launch_default_for_uri(
-                    target.as_str(),
-                    None::<&gio::AppLaunchContext>,
-                ) {
-                    eprintln!("failed to open external link: {error}");
-                }
+                open_external_uri(target.as_str());
                 true
             }
             NavigationDisposition::Deny => {
@@ -72,12 +67,47 @@ pub(crate) fn is_trusted_web_origin(uri: Option<&str>) -> bool {
         || host.ends_with(".openai.com")
 }
 
-pub(crate) fn is_allowed_popup_target(uri: &str) -> bool {
-    if uri == "about:blank" {
-        return true;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PopupDisposition {
+    ChildWebView,
+    External,
+    Deny,
+}
+
+pub(crate) fn classify_popup_target(uri: &str) -> PopupDisposition {
+    if uri == "about:blank" || is_trusted_web_origin(Some(uri)) {
+        return PopupDisposition::ChildWebView;
     }
-    glib::Uri::parse(uri, glib::UriFlags::NONE)
-        .is_ok_and(|parsed| parsed.scheme().as_str() == "https")
+
+    let Ok(parsed) = glib::Uri::parse(uri, glib::UriFlags::NONE) else {
+        return PopupDisposition::Deny;
+    };
+    if parsed.scheme().as_str() != "https" {
+        return PopupDisposition::Deny;
+    }
+
+    let Some(host) = parsed.host() else {
+        return PopupDisposition::Deny;
+    };
+    let host = host.to_ascii_lowercase();
+
+    if matches!(
+        host.as_str(),
+        "accounts.google.com"
+            | "appleid.apple.com"
+            | "login.microsoftonline.com"
+            | "login.live.com"
+    ) {
+        PopupDisposition::ChildWebView
+    } else {
+        PopupDisposition::External
+    }
+}
+
+pub(crate) fn open_external_uri(uri: &str) {
+    if let Err(error) = gio::AppInfo::launch_default_for_uri(uri, None::<&gio::AppLaunchContext>) {
+        eprintln!("failed to open external link: {error}");
+    }
 }
 
 fn classify_navigation(
@@ -126,12 +156,40 @@ mod tests {
     }
 
     #[test]
-    fn popup_targets_allow_https_and_initial_blank_document_only() {
-        assert!(is_allowed_popup_target("https://accounts.google.com/"));
-        assert!(is_allowed_popup_target("about:blank"));
-        assert!(!is_allowed_popup_target("http://accounts.google.com/"));
-        assert!(!is_allowed_popup_target("javascript:alert(1)"));
-        assert!(!is_allowed_popup_target("not a uri"));
+    fn popup_targets_keep_auth_providers_in_app_and_handoff_other_https() {
+        assert_eq!(
+            classify_popup_target("https://accounts.google.com/"),
+            PopupDisposition::ChildWebView
+        );
+        assert_eq!(
+            classify_popup_target("https://appleid.apple.com/"),
+            PopupDisposition::ChildWebView
+        );
+        assert_eq!(
+            classify_popup_target("https://login.microsoftonline.com/common/"),
+            PopupDisposition::ChildWebView
+        );
+        assert_eq!(
+            classify_popup_target("https://www.google.com/"),
+            PopupDisposition::External
+        );
+        assert_eq!(
+            classify_popup_target("https://example.com/"),
+            PopupDisposition::External
+        );
+        assert_eq!(
+            classify_popup_target("about:blank"),
+            PopupDisposition::ChildWebView
+        );
+        assert_eq!(
+            classify_popup_target("http://accounts.google.com/"),
+            PopupDisposition::Deny
+        );
+        assert_eq!(
+            classify_popup_target("javascript:alert(1)"),
+            PopupDisposition::Deny
+        );
+        assert_eq!(classify_popup_target("not a uri"), PopupDisposition::Deny);
     }
 
     #[test]
