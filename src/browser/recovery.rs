@@ -24,6 +24,7 @@ enum RecoveryState {
 struct RecoveryTracker {
     state: RecoveryState,
     automatic_process_recoveries: u8,
+    last_committed_target: String,
 }
 
 impl Default for RecoveryTracker {
@@ -31,19 +32,25 @@ impl Default for RecoveryTracker {
         Self {
             state: RecoveryState::Healthy,
             automatic_process_recoveries: 0,
+            last_committed_target: CHATGPT_URL.to_owned(),
         }
     }
 }
 
 impl RecoveryTracker {
-    fn navigation_failed(&mut self, target: String) {
+    fn navigation_committed(&mut self, uri: Option<&str>) {
+        self.last_committed_target = safe_recovery_target(uri);
+    }
+
+    fn navigation_failed(&mut self) {
         self.state = RecoveryState::Failed {
             kind: FailureKind::Navigation,
-            target,
+            target: self.last_committed_target.clone(),
         };
     }
 
-    fn web_process_terminated(&mut self, target: String) -> Option<String> {
+    fn web_process_terminated(&mut self) -> Option<String> {
+        let target = self.last_committed_target.clone();
         if self.automatic_process_recoveries < MAX_AUTOMATIC_PROCESS_RECOVERIES {
             self.automatic_process_recoveries += 1;
             self.state = RecoveryState::Recovering {
@@ -125,13 +132,12 @@ pub(crate) fn wrap_with_recovery(web_view: &WebView) -> gtk::Overlay {
     let failure_box = recovery_box.clone();
     let failure_message = message.clone();
     let failure_button = retry.clone();
-    web_view.connect_load_failed(move |_, _, failing_uri, error| {
+    web_view.connect_load_failed(move |_, _, _failing_uri, error| {
         if error.matches(NetworkError::Cancelled) {
             return true;
         }
 
-        let target = safe_recovery_target(Some(failing_uri));
-        failure_tracker.borrow_mut().navigation_failed(target);
+        failure_tracker.borrow_mut().navigation_failed();
         show_failed(
             &failure_box,
             &failure_message,
@@ -143,15 +149,19 @@ pub(crate) fn wrap_with_recovery(web_view: &WebView) -> gtk::Overlay {
 
     let changed_tracker = tracker.clone();
     let changed_box = recovery_box.clone();
-    web_view.connect_load_changed(move |_, event| {
-        if event != LoadEvent::Finished {
-            return;
-        }
-
+    web_view.connect_load_changed(move |web_view, event| {
         let mut tracker = changed_tracker.borrow_mut();
-        tracker.load_finished();
-        if matches!(tracker.state, RecoveryState::Healthy) {
-            changed_box.set_visible(false);
+        match event {
+            LoadEvent::Committed => {
+                tracker.navigation_committed(web_view.uri().as_deref());
+            }
+            LoadEvent::Finished => {
+                tracker.load_finished();
+                if matches!(tracker.state, RecoveryState::Healthy) {
+                    changed_box.set_visible(false);
+                }
+            }
+            _ => {}
         }
     });
 
@@ -160,10 +170,7 @@ pub(crate) fn wrap_with_recovery(web_view: &WebView) -> gtk::Overlay {
     let terminated_message = message.clone();
     let terminated_button = retry.clone();
     web_view.connect_web_process_terminated(move |web_view, _reason| {
-        let target = safe_recovery_target(web_view.uri().as_deref());
-        let automatic_target = terminated_tracker
-            .borrow_mut()
-            .web_process_terminated(target);
+        let automatic_target = terminated_tracker.borrow_mut().web_process_terminated();
 
         if let Some(target) = automatic_target {
             show_recovering(&terminated_box, &terminated_message, &terminated_button);
@@ -208,7 +215,8 @@ mod tests {
     #[test]
     fn load_failure_survives_followup_finished_event() {
         let mut tracker = RecoveryTracker::default();
-        tracker.navigation_failed("https://chatgpt.com/".into());
+        tracker.navigation_committed(Some("https://chatgpt.com/"));
+        tracker.navigation_failed();
 
         tracker.load_finished();
 
@@ -222,17 +230,27 @@ mod tests {
     }
 
     #[test]
-    fn web_process_recovery_is_automatic_once_then_bounded() {
+    fn failed_provisional_navigation_retries_last_committed_page() {
         let mut tracker = RecoveryTracker::default();
-        let target = "https://chatgpt.com/c/example".to_owned();
+        tracker.navigation_committed(Some("https://chatgpt.com/c/good"));
+        tracker.navigation_failed();
 
         assert_eq!(
-            tracker.web_process_terminated(target.clone()),
-            Some(target.clone())
+            tracker.manual_retry().as_deref(),
+            Some("https://chatgpt.com/c/good")
         );
+    }
+
+    #[test]
+    fn web_process_recovery_is_automatic_once_then_bounded() {
+        let mut tracker = RecoveryTracker::default();
+        let target = "https://chatgpt.com/c/example";
+
+        tracker.navigation_committed(Some(target));
+        assert_eq!(tracker.web_process_terminated().as_deref(), Some(target));
         assert!(matches!(tracker.state, RecoveryState::Recovering { .. }));
 
-        assert_eq!(tracker.web_process_terminated(target.clone()), None);
+        assert_eq!(tracker.web_process_terminated(), None);
         assert!(matches!(
             tracker.state,
             RecoveryState::Failed {
@@ -245,13 +263,14 @@ mod tests {
     #[test]
     fn successful_recovery_resets_process_retry_budget() {
         let mut tracker = RecoveryTracker::default();
-        let target = "https://chatgpt.com/".to_owned();
+        let target = "https://chatgpt.com/";
 
-        assert!(tracker.web_process_terminated(target.clone()).is_some());
+        tracker.navigation_committed(Some(target));
+        assert!(tracker.web_process_terminated().is_some());
         tracker.load_finished();
 
         assert_eq!(tracker.state, RecoveryState::Healthy);
-        assert!(tracker.web_process_terminated(target).is_some());
+        assert!(tracker.web_process_terminated().is_some());
     }
 
     #[test]
@@ -259,7 +278,8 @@ mod tests {
         let mut tracker = RecoveryTracker::default();
         assert_eq!(tracker.manual_retry(), None);
 
-        tracker.navigation_failed("https://chatgpt.com/".into());
+        tracker.navigation_committed(Some("https://chatgpt.com/"));
+        tracker.navigation_failed();
         assert_eq!(
             tracker.manual_retry().as_deref(),
             Some("https://chatgpt.com/")

@@ -127,7 +127,8 @@ Main-window state is profile-scoped at `$XDG_STATE_HOME/mado/profiles/<id>/windo
 Recovery is intentionally bounded:
 - cancelled loads are ignored and do not surface stock WebKit error pages;
 - an ordinary navigation/load failure shows a native recovery banner and waits for an explicit user reload;
-- an abnormal WebProcess termination gets at most one automatic reload of the current HTTP(S) page (falling back to the ChatGPT home URL);
+- recovery targets the last successfully committed HTTP(S) page; a provisional URI that failed before commit is never promoted to the retry target;
+- an abnormal WebProcess termination gets at most one automatic reload of that last committed page (falling back to the ChatGPT home URL);
 - if that recovery does not finish successfully before another process termination/failure, automatic recovery stops and the user must choose Reload;
 - a successful recovery resets the one-shot WebProcess retry budget;
 - Mado does not watch for network restoration and does not automatically loop retries;
