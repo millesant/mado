@@ -16,14 +16,19 @@ pub fn chatgpt_web_view() -> WebView {
     web_view
 }
 
-pub fn stop_app_web_views(application: &gtk::Application) {
+pub fn quiesce_app_web_views(application: &gtk::Application) {
     for window in application.windows() {
         if let Some(child) = window.child()
             && let Ok(web_view) = child.downcast::<WebView>()
         {
-            web_view.stop_loading();
+            quiesce_web_view(&web_view);
         }
     }
+}
+
+fn quiesce_web_view(web_view: &WebView) {
+    web_view.stop_loading();
+    web_view.load_html("", None);
 }
 
 fn configure_popup_handling(web_view: &WebView) {
@@ -55,7 +60,7 @@ fn configure_popup_handling(web_view: &WebView) {
 
         let closing_popup = popup.clone();
         window.connect_close_request(move |_| {
-            closing_popup.stop_loading();
+            quiesce_web_view(&closing_popup);
             glib::Propagation::Proceed
         });
 
