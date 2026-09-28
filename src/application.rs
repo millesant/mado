@@ -1,18 +1,17 @@
-use gtk::prelude::*;
-use relm4::{RelmApp, gtk, prelude::*};
-use webkit6::WebView;
-
 use crate::{
     browser::{
+        recovery::wrap_with_recovery,
         state::WindowState,
         window::{chatgpt_web_view, stop_app_web_views},
     },
     platform::xdg::XdgDirectories,
     profiles::{ProfileId, storage::ProfilePaths},
 };
+use gtk::prelude::*;
+use relm4::{RelmApp, gtk, prelude::*};
 
 struct MadoApp {
-    web_view: WebView,
+    browser_widget: gtk::Overlay,
 }
 
 #[relm4::component]
@@ -24,7 +23,7 @@ impl SimpleComponent for MadoApp {
     view! {
         main_window = gtk::ApplicationWindow {
             set_title: Some("Mado"),
-            set_child: Some(&model.web_view),
+            set_child: Some(&model.browser_widget),
         }
     }
 
@@ -42,8 +41,9 @@ impl SimpleComponent for MadoApp {
             WindowState::default()
         });
 
+        let web_view = chatgpt_web_view(&paths);
         let model = MadoApp {
-            web_view: chatgpt_web_view(&paths),
+            browser_widget: wrap_with_recovery(&web_view),
         };
         let widgets = view_output!();
 

@@ -7,6 +7,7 @@ use super::{
         is_trusted_web_origin, open_external_uri,
     },
     permissions::configure_media_permissions,
+    recovery::wrap_with_recovery,
     session::create_profile_network_session,
     transfers::configure_file_chooser,
 };
@@ -27,11 +28,23 @@ pub fn chatgpt_web_view(paths: &crate::profiles::storage::ProfilePaths) -> WebVi
 
 pub fn stop_app_web_views(application: &gtk::Application) {
     for window in application.windows() {
-        if let Some(child) = window.child()
-            && let Ok(web_view) = child.downcast::<WebView>()
-        {
-            web_view.stop_loading();
+        if let Some(child) = window.child() {
+            stop_web_views_in_widget(&child);
         }
+    }
+}
+
+fn stop_web_views_in_widget(widget: &gtk::Widget) {
+    if let Some(web_view) = widget.downcast_ref::<WebView>() {
+        web_view.stop_loading();
+        return;
+    }
+
+    let mut child = widget.first_child();
+    while let Some(current) = child {
+        let next = current.next_sibling();
+        stop_web_views_in_widget(&current);
+        child = next;
     }
 }
 
@@ -65,7 +78,8 @@ fn configure_popup_handling(web_view: &WebView) {
             .default_width(900)
             .default_height(700)
             .build();
-        window.set_child(Some(&popup));
+        let popup_widget = wrap_with_recovery(&popup);
+        window.set_child(Some(&popup_widget));
 
         let ready_window = window.clone();
         popup.connect_ready_to_show(move |_| ready_window.present());

@@ -120,6 +120,21 @@ Mado uses GTK/GApplication uniqueness through Relm4 rather than a secondary lock
 
 Main-window state is profile-scoped at `$XDG_STATE_HOME/mado/profiles/<id>/window-state`. Persist only width, height, and maximized state. Do not persist or restore absolute window coordinates: Wayland compositors own placement and do not provide a portable absolute-position contract.
 
+## WebKit recovery
+
+`browser/recovery.rs` owns native recovery state for main and related child WebViews.
+
+Recovery is intentionally bounded:
+- cancelled loads are ignored and do not surface stock WebKit error pages;
+- an ordinary navigation/load failure shows a native recovery banner and waits for an explicit user reload;
+- an abnormal WebProcess termination gets at most one automatic reload of the current HTTP(S) page (falling back to the ChatGPT home URL);
+- if that recovery does not finish successfully before another process termination/failure, automatic recovery stops and the user must choose Reload;
+- a successful recovery resets the one-shot WebProcess retry budget;
+- Mado does not watch for network restoration and does not automatically loop retries;
+- recovery only reloads page URLs. It never injects, replays, or submits prompt text.
+
+WebKitGTK emits `load-changed(Finished)` immediately after `load-failed`; the state machine therefore preserves a failed state across that terminal event instead of treating it as success.
+
 ## Threading
 
 GTK/Relm4/WebKit objects stay on the GLib main context unless their API explicitly supports otherwise.

@@ -10,7 +10,7 @@ It tracks architectural/behavioral parity only. GitHub Issues and the Project bo
 | `AppDelegate.swift` | `application.rs` + app actions/services | P1/P2 | Split responsibilities rather than one delegate |
 | `BrowserWindowController.swift` | `browser/window.rs` | P0/P1 | WebKitGTK 6 WebView lifecycle |
 | navigation policy | `browser/navigation.rs` | P1 | trusted origins, OAuth, external links |
-| WebKit failure recovery | `browser/recovery.rs` | P1 | load/render-process recovery |
+| WebKit failure recovery | `browser/recovery.rs` | P1 | native bounded load-failure state + one-shot WebProcess reload; no network retry loop or prompt resend |
 | `BrowserSupport.swift` | browser/profile/privacy modules | P1/P2 | split by responsibility |
 | isolated website data stores | `profiles/storage.rs` + profile-scoped `NetworkSession` | P1 | XDG-backed per-profile data/cache/cookies; no cross-profile fallback |
 | cookie-consent defaults | `privacy/` + web scripts | P2 | must not damage login/session |
