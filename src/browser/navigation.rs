@@ -1,6 +1,6 @@
 use relm4::gtk::glib;
 
-pub(crate) fn is_trusted_popup_source(uri: Option<&str>) -> bool {
+pub(crate) fn is_trusted_web_origin(uri: Option<&str>) -> bool {
     let Some(uri) = uri else {
         return false;
     };
@@ -33,15 +33,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn popup_sources_are_limited_to_chatgpt_and_openai_https_origins() {
-        assert!(is_trusted_popup_source(Some("https://chatgpt.com/")));
-        assert!(is_trusted_popup_source(Some("https://auth.openai.com/")));
-        assert!(!is_trusted_popup_source(Some("http://chatgpt.com/")));
-        assert!(!is_trusted_popup_source(Some(
+    fn trusted_web_origins_are_limited_to_chatgpt_and_openai_https_hosts() {
+        assert!(is_trusted_web_origin(Some("https://chatgpt.com/")));
+        assert!(is_trusted_web_origin(Some("https://auth.openai.com/")));
+        assert!(!is_trusted_web_origin(Some("http://chatgpt.com/")));
+        assert!(!is_trusted_web_origin(Some(
             "https://chatgpt.com.example.org/"
         )));
-        assert!(!is_trusted_popup_source(Some("https://example.org/")));
-        assert!(!is_trusted_popup_source(None));
+        assert!(!is_trusted_web_origin(Some("https://example.org/")));
+        assert!(!is_trusted_web_origin(None));
     }
 
     #[test]

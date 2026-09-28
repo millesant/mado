@@ -41,7 +41,9 @@ Bridge messages require:
 
 DOM selectors and injected scripts live in the dedicated web-integration layer.
 
-## Downloads
+## Uploads and downloads
+
+File chooser requests are allowed only from an HTTPS ChatGPT/OpenAI page. Trusted requests use WebKitGTK's native GTK chooser; requests from other current page origins are cancelled.
 
 Treat filenames, MIME types, sizes, and bytes as untrusted.
 Normalize/sanitize suggested filenames.
