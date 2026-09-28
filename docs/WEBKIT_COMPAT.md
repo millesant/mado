@@ -6,20 +6,21 @@ This document records durable compatibility findings. GitHub Issues track active
 
 ## Test environments
 
-Record:
-- distribution/version;
-- GTK version;
-- WebKitGTK version;
-- display backend (Wayland/X11);
-- desktop environment;
-- Flatpak vs host build when relevant.
+### Fedora 44 host smoke — issue #5
+
+- Fedora Linux 44, x86_64 host build
+- GTK 4.22.5
+- WebKitGTK 2.54.0
+- KDE on Wayland
+- Manual evidence: native Mado window opened, `https://chatgpt.com/` rendered to the signed-out ChatGPT UI, and closing the window returned to the shell with no lingering Mado/WebKit helper process.
+- One credential-socket `Broken pipe` warning was observed during shutdown on this host; after commit `1de52c2`, the repeated WebKit `internallyFailedLoadTimerFired()` shutdown errors no longer occurred.
 
 ## Gate matrix
 
 | Capability | Required for P0 exit | Current state | Evidence |
 |---|---:|---|---|
-| launch native GTK/Relm4 shell | yes | Unverified | |
-| load `https://chatgpt.com` | yes | Unverified | |
+| launch native GTK/Relm4 shell | yes | Verified | Fedora 44 host smoke above; clean process exit after `1de52c2` |
+| load `https://chatgpt.com` | yes | Verified | Fedora 44 host smoke above; current signed-out ChatGPT UI rendered in WebKitGTK 6 |
 | interactive login | yes | Unverified | |
 | session persists after restart | yes | Unverified | |
 | Google/Apple/Microsoft OAuth/new-window flow | yes | Unverified | |
