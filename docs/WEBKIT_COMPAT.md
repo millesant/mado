@@ -41,6 +41,18 @@ This document records durable compatibility findings. GitHub Issues track active
 - The XWayland smoke rendered a 20-item streamed response followed by a second summarization turn with normal typing, clicking, scrolling, and layout.
 - An initial process sample during XWayland page startup showed one WebKit web process briefly using about 81% CPU and 768 MiB RSS; no sustained rendering/performance blocker was observed during the completed interaction.
 
+### Fedora 44 external-link smoke — issue #27
+
+- Same Fedora 44 / KDE Wayland host.
+- A user-initiated third-party HTTPS link from ChatGPT was handed to the Linux default browser through GIO; the browser reported that it opened the URL in the existing browser session.
+- Mado remained on ChatGPT and did not create a child WebView for the third-party link after commit `22a97cf`.
+- Trusted ChatGPT/OpenAI destinations remain embedded; known OAuth providers may still use a related child WebView. Unknown/custom schemes are denied.
+
+### Known non-gating runtime defect — issue #24
+
+- Authenticated shutdown can still produce delayed WebKitGTK 2.54 `internallyFailedLoadTimerFired()` stderr output after the native Mado process returns to the shell.
+- Multiple bounded Mado-side teardown attempts did not remove the symptom. #24 remains open for upstream/runtime diagnosis and is not treated as a P0 viability blocker because launch, authenticated use, persistence, and process exit are otherwise functional.
+
 ## Gate matrix
 
 | Capability | Required for P0 exit | Current state | Evidence |
@@ -58,7 +70,7 @@ This document records durable compatibility findings. GitHub Issues track active
 | microphone permission | yes | Verified | Fedora 44 media smoke; native Mado prompt appeared and approved microphone capture worked |
 | voice input / relevant WebRTC path | yes | Known limitation | Basic dictation worked; full ChatGPT Voice mode could not connect on WebKitGTK 2.54.0 and is tracked in #26 |
 | camera permission where ChatGPT requests it | no | Not exercised | No reachable camera flow was exposed during the issue #8 smoke test |
-| external links can hand off to system browser | yes | Unverified | |
+| external links can hand off to system browser | yes | Verified | Fedora 44 external-link smoke; third-party HTTPS opened in the existing system browser session while Mado stayed on ChatGPT |
 | Wayland smoke | yes | Verified | Fedora 44 KDE Wayland host used throughout P0 interactive testing without immediate chat layout/input corruption |
 | X11 smoke | yes | Verified | Fedora 44 KDE XWayland (`GDK_BACKEND=x11`, `DISPLAY=:0`) multi-turn chat smoke passed |
 | page recovery after WebKit/load failure | no | Unverified | |
