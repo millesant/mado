@@ -15,10 +15,11 @@ Profiles are isolation boundaries. Cookies, local storage, IndexedDB, service wo
 
 ## Authentication and cookies
 
-Prefer WebKit-managed persistent sessions. The P0 default shell configures WebKit's SQLite cookie store at `$XDG_DATA_HOME/mado/cookies.sqlite` (or `~/.local/share/mado/cookies.sqlite` when the XDG variable is unset); native code configures the store but does not read cookie contents.
-Do not extract, serialize, log, or manually shuttle authentication cookies unless a narrowly scoped feature explicitly requires it and receives a separate security review.
+Prefer WebKit-managed persistent sessions. Each P1 profile owns a distinct WebKit `NetworkSession`, profile-specific data/cache directories, and a SQLite cookie store at `$XDG_DATA_HOME/mado/profiles/<id>/cookies.sqlite` (with the usual XDG fallback). Native code configures these paths but does not read cookie contents.
 
-Deleting a profile must delete only that profile's owned data.
+Profile IDs are validated as canonical path-safe identifiers before filesystem use. Do not extract, serialize, log, or manually shuttle authentication cookies unless a narrowly scoped feature explicitly requires it and receives a separate security review.
+
+Deleting a profile removes only that profile's config/data/state/cache directories. The legacy P0 root-level WebKit store is not automatically copied into a P1 profile because an old WebKit helper may still hold it open during startup.
 
 ## Navigation
 

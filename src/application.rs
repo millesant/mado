@@ -2,7 +2,11 @@ use gtk::prelude::*;
 use relm4::{RelmApp, gtk, prelude::*};
 use webkit6::WebView;
 
-use crate::browser::window::{chatgpt_web_view, stop_app_web_views};
+use crate::{
+    browser::window::{chatgpt_web_view, stop_app_web_views},
+    platform::xdg::XdgDirectories,
+    profiles::{ProfileId, storage::ProfilePaths},
+};
 
 struct MadoApp {
     web_view: WebView,
@@ -10,7 +14,7 @@ struct MadoApp {
 
 #[relm4::component]
 impl SimpleComponent for MadoApp {
-    type Init = ();
+    type Init = ProfileId;
     type Input = ();
     type Output = ();
 
@@ -23,12 +27,13 @@ impl SimpleComponent for MadoApp {
     }
 
     fn init(
-        _: Self::Init,
+        profile: Self::Init,
         root: Self::Root,
         _sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let paths = ProfilePaths::new(&XdgDirectories::discover(), &profile);
         let model = MadoApp {
-            web_view: chatgpt_web_view(),
+            web_view: chatgpt_web_view(&paths),
         };
         root.connect_close_request(move |_| {
             stop_app_web_views(&relm4::main_application());
@@ -40,6 +45,6 @@ impl SimpleComponent for MadoApp {
     }
 }
 
-pub fn run() {
-    RelmApp::new("io.github.Millesant.Mado").run::<MadoApp>(());
+pub fn run(profile: ProfileId) {
+    RelmApp::new("io.github.Millesant.Mado").run::<MadoApp>(profile);
 }

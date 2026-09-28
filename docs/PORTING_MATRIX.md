@@ -12,7 +12,7 @@ It tracks architectural/behavioral parity only. GitHub Issues and the Project bo
 | navigation policy | `browser/navigation.rs` | P1 | trusted origins, OAuth, external links |
 | WebKit failure recovery | `browser/recovery.rs` | P1 | load/render-process recovery |
 | `BrowserSupport.swift` | browser/profile/privacy modules | P1/P2 | split by responsibility |
-| isolated website data stores | `profiles/storage.rs` | P1 | per-profile persistent WebKit data/cache |
+| isolated website data stores | `profiles/storage.rs` + profile-scoped `NetworkSession` | P1 | XDG-backed per-profile data/cache/cookies; no cross-profile fallback |
 | cookie-consent defaults | `privacy/` + web scripts | P2 | must not damage login/session |
 | draft preservation/recovery | `web/scripts/draft.js` + Rust store | P2 | no prompt auto-send |
 | completion detection | `web/scripts/completion.js` | P2 | DOM-dependent and isolated |

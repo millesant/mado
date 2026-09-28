@@ -7,15 +7,16 @@ use super::{
         is_trusted_web_origin, open_external_uri,
     },
     permissions::configure_media_permissions,
-    session::configure_cookie_persistence,
+    session::create_profile_network_session,
     transfers::configure_file_chooser,
 };
 
 pub const CHATGPT_URL: &str = "https://chatgpt.com/";
 
-pub fn chatgpt_web_view() -> WebView {
-    configure_cookie_persistence().expect("failed to configure persistent WebKit cookies");
-    let web_view = WebView::new();
+pub fn chatgpt_web_view(paths: &crate::profiles::storage::ProfilePaths) -> WebView {
+    let session = create_profile_network_session(paths)
+        .expect("failed to initialize persistent WebKit profile storage");
+    let web_view = WebView::builder().network_session(&session).build();
     configure_file_chooser(&web_view);
     configure_media_permissions(&web_view);
     configure_navigation_policy(&web_view);

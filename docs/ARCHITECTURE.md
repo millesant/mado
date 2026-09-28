@@ -100,6 +100,20 @@ Use the XDG base directory specification:
 
 Per-profile WebKit data/cache must live beneath profile-specific directories.
 
+The P1 profile layout is:
+
+```text
+$XDG_CONFIG_HOME/mado/profiles/<id>/
+$XDG_DATA_HOME/mado/profiles/<id>/
+├── cookies.sqlite
+└── webkit/
+$XDG_STATE_HOME/mado/profiles/<id>/
+$XDG_CACHE_HOME/mado/profiles/<id>/
+└── webkit/
+```
+
+Each profile receives its own persistent WebKit `NetworkSession` using that profile's data/cache roots. Profile IDs are validated before they are used in paths, and profile deletion removes only the four directories owned by that profile.
+
 ## Threading
 
 GTK/Relm4/WebKit objects stay on the GLib main context unless their API explicitly supports otherwise.
