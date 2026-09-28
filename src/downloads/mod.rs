@@ -38,21 +38,22 @@ struct DownloadRecord {
 
 impl DownloadController {
     pub(crate) fn new() -> Self {
-        let banner = gtk::Box::new(gtk::Orientation::Vertical, 6);
-        banner.set_halign(gtk::Align::End);
-        banner.set_valign(gtk::Align::Start);
-        banner.set_margin_top(18);
-        banner.set_margin_end(18);
-        banner.set_size_request(340, -1);
-        banner.add_css_class("card");
+        let banner = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        banner.set_margin_top(8);
+        banner.set_margin_bottom(8);
+        banner.set_margin_start(12);
+        banner.set_margin_end(12);
         banner.set_visible(false);
 
         let label = gtk::Label::new(None);
         label.set_halign(gtk::Align::Start);
-        label.set_wrap(true);
+        label.set_hexpand(true);
+        label.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
 
         let progress = gtk::ProgressBar::new();
         progress.set_show_text(false);
+        progress.set_size_request(180, -1);
+        progress.set_valign(gtk::Align::Center);
 
         banner.append(&label);
         banner.append(&progress);
@@ -148,9 +149,14 @@ impl DownloadController {
             record.paths = Some(paths.clone());
         }
 
-        let destination = gtk::gio::File::for_path(&paths.partial_path).uri();
+        let Some(destination) = paths.partial_path.to_str() else {
+            download.cancel();
+            self.download_failed(id, "download path is not valid UTF-8");
+            return true;
+        };
+
         download.set_allow_overwrite(false);
-        download.set_destination(destination.as_str());
+        download.set_destination(destination);
         self.show_status(&format!("Downloading {filename}"), Some(0.0));
         true
     }
@@ -196,31 +202,32 @@ impl DownloadController {
 
         match paths.complete() {
             Ok(()) => {
-                self.show_status(&format!("Downloaded {}", record.filename), Some(1.0));
+                let status = format!("Downloaded {}", record.filename);
+                self.show_status(&status, Some(1.0));
+                self.hide_status_after(status, 4);
             }
             Err(error) => {
                 let _ = paths.discard_partial();
-                self.show_status(
-                    &format!("Download failed while saving {}: {error}", record.filename),
-                    None,
-                );
+                let status = format!("Download failed while saving {}: {error}", record.filename);
+                self.show_status(&status, None);
+                self.hide_status_after(status, 8);
             }
         }
     }
 
     fn download_failed(&self, id: u64, message: &str) {
         let record = self.inner.active.borrow_mut().remove(&id);
-        if let Some(record) = record {
+        let status = if let Some(record) = record {
             if let Some(paths) = record.paths {
                 let _ = paths.discard_partial();
             }
-            self.show_status(
-                &format!("Download failed: {} ({message})", record.filename),
-                None,
-            );
+            format!("Download failed: {} ({message})", record.filename)
         } else {
-            self.show_status(&format!("Download failed: {message}"), None);
-        }
+            format!("Download failed: {message}")
+        };
+
+        self.show_status(&status, None);
+        self.hide_status_after(status, 8);
     }
 
     fn show_status(&self, text: &str, fraction: Option<f64>) {
@@ -236,6 +243,17 @@ impl DownloadController {
             }
         }
         self.inner.banner.set_visible(true);
+    }
+
+    fn hide_status_after(&self, expected_text: String, seconds: u32) {
+        let controller = self.clone();
+        gtk::glib::timeout_add_seconds_local_once(seconds, move || {
+            if controller.inner.active.borrow().is_empty()
+                && controller.inner.label.text().as_str() == expected_text
+            {
+                controller.inner.banner.set_visible(false);
+            }
+        });
     }
 }
 

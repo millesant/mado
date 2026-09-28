@@ -12,7 +12,7 @@ use gtk::prelude::*;
 use relm4::{RelmApp, gtk, prelude::*};
 
 struct MadoApp {
-    browser_widget: gtk::Overlay,
+    root_widget: gtk::Box,
 }
 
 #[relm4::component]
@@ -24,7 +24,7 @@ impl SimpleComponent for MadoApp {
     view! {
         main_window = gtk::ApplicationWindow {
             set_title: Some("Mado"),
-            set_child: Some(&model.browser_widget),
+            set_child: Some(&model.root_widget),
         }
     }
 
@@ -45,8 +45,13 @@ impl SimpleComponent for MadoApp {
         let downloads = DownloadController::new();
         let web_view = chatgpt_web_view(&paths, &downloads);
         let browser_widget = wrap_with_recovery(&web_view);
-        browser_widget.add_overlay(&downloads.widget());
-        let model = MadoApp { browser_widget };
+        browser_widget.set_vexpand(true);
+
+        let root_widget = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        root_widget.append(&browser_widget);
+        root_widget.append(&downloads.widget());
+
+        let model = MadoApp { root_widget };
         let widgets = view_output!();
 
         root.set_default_size(window_state.width, window_state.height);

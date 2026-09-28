@@ -34,7 +34,14 @@ impl DownloadPaths {
     }
 
     pub(crate) fn complete(&self) -> io::Result<()> {
-        fs::rename(&self.partial_path, &self.final_path)
+        fs::hard_link(&self.partial_path, &self.final_path)?;
+        match fs::remove_file(&self.partial_path) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                let _ = fs::remove_file(&self.final_path);
+                Err(error)
+            }
+        }
     }
 
     pub(crate) fn discard_partial(&self) -> io::Result<()> {
@@ -120,6 +127,26 @@ mod tests {
         assert!(!paths.partial_path.exists());
         assert!(!paths.final_path.exists());
 
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn complete_never_overwrites_a_file_that_appears_mid_download() {
+        let directory = test_root();
+        fs::create_dir_all(&directory).unwrap();
+        let paths = DownloadPaths::new(&directory, directory.join("report.txt"), 3);
+
+        fs::write(&paths.partial_path, b"downloaded bytes").unwrap();
+        fs::write(&paths.final_path, b"other process").unwrap();
+
+        assert_eq!(
+            paths.complete().unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists
+        );
+        assert_eq!(fs::read(&paths.final_path).unwrap(), b"other process");
+        assert_eq!(fs::read(&paths.partial_path).unwrap(), b"downloaded bytes");
+
+        paths.discard_partial().unwrap();
         fs::remove_dir_all(directory).unwrap();
     }
 }

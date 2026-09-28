@@ -18,7 +18,7 @@ It tracks architectural/behavioral parity only. GitHub Issues and the Project bo
 | completion detection | `web/scripts/completion.js` | P2 | DOM-dependent and isolated |
 | native completion notifications | `notifications/` | P2 | only when appropriate/unfocused |
 | normal downloads | `downloads/` | P0/P1 | profile `NetworkSession` download stream, safe `.part` → final promotion, native status |
-| `blob:` / `data:` generated downloads | `downloads/` | P0/P1 | WebKitGTK 2.54 handles tested synthetic URLs natively; no JS/base64 bridge unless a future compatibility gap requires bounded chunks |
+| `blob:` / `data:` generated downloads | navigation policy + `downloads/` | P0/P1 | trusted user-gesture policy decisions are promoted into native WebKit downloads; no JS/base64 bridge unless a future compatibility gap requires bounded chunks |
 | OAuth/login popup handling | browser navigation/window policy | P0/P1 | must preserve login context |
 | microphone/camera permissions | `browser/permissions.rs` | P0/P1 | trusted-origin policy |
 | window frame persistence | `browser/state.rs` | P1 | profile-scoped size/maximized state only; no Wayland absolute positioning |

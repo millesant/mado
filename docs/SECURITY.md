@@ -50,9 +50,9 @@ Treat filenames, MIME types, sizes, and bytes as untrusted.
 
 WebKit download suggestions never become filesystem paths directly. Mado removes path/control syntax, bounds filename length by UTF-8 bytes, reserves a unique destination under the user's Downloads directory, and downloads into a hidden same-directory `.part` file first. A failed/cancelled transfer removes the partial file; only successful completion renames it to the final filename.
 
-The tested WebKitGTK runtime streams HTTP(S), `blob:`, and `data:` downloads through the native download API, so Mado does not base64-serialize synthetic downloads. If a future fallback bridge becomes necessary, it must be bounded/chunked and stay behind the web-integration boundary.
+The tested WebKitGTK runtime streams HTTP(S) downloads through the native download API. Trusted ChatGPT/OpenAI pages may also convert a real user-initiated `blob:` or `data:` navigation policy decision into a WebKit download; the same schemes are denied without both the trusted source and user gesture. Mado therefore does not base64-serialize synthetic downloads. If a future fallback bridge becomes necessary, it must be bounded/chunked and stay behind the web-integration boundary.
 
-Downloaded files are never auto-executed or automatically launched.
+Successful finalization is no-clobber: if another process creates the reserved final path during the transfer, Mado fails safely rather than overwriting that file. Downloaded files are never auto-executed or automatically launched.
 
 ## Permissions
 

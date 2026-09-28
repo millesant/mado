@@ -8,6 +8,7 @@ use webkit6::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NavigationDisposition {
     Embedded,
+    Download,
     External,
     Deny,
 }
@@ -27,13 +28,16 @@ pub(crate) fn configure_navigation_policy(web_view: &WebView) {
         let Some(target) = action.request().and_then(|request| request.uri()) else {
             return false;
         };
-
         match classify_navigation(
             web_view.uri().as_deref(),
             target.as_str(),
             action.is_user_gesture(),
         ) {
             NavigationDisposition::Embedded => false,
+            NavigationDisposition::Download => {
+                decision.download();
+                true
+            }
             NavigationDisposition::External => {
                 decision.ignore();
                 open_external_uri(target.as_str());
@@ -125,10 +129,10 @@ fn classify_navigation(
     let scheme = target.scheme();
 
     if is_trusted_web_origin(source_uri) && is_user_gesture {
-        return if scheme.as_str() == "https" {
-            NavigationDisposition::External
-        } else {
-            NavigationDisposition::Deny
+        return match scheme.as_str() {
+            "blob" | "data" => NavigationDisposition::Download,
+            "https" => NavigationDisposition::External,
+            _ => NavigationDisposition::Deny,
         };
     }
 
@@ -206,6 +210,29 @@ mod tests {
         );
         assert_eq!(
             classify_navigation(source, "mailto:test@example.com", true),
+            NavigationDisposition::Deny
+        );
+    }
+
+    #[test]
+    fn trusted_user_generated_blob_and_data_links_become_downloads() {
+        let source = Some("https://chatgpt.com/");
+
+        assert_eq!(
+            classify_navigation(source, "blob:https://chatgpt.com/example", true),
+            NavigationDisposition::Download
+        );
+        assert_eq!(
+            classify_navigation(source, "data:text/plain,hello", true),
+            NavigationDisposition::Download
+        );
+
+        assert_eq!(
+            classify_navigation(source, "blob:https://chatgpt.com/example", false),
+            NavigationDisposition::Deny
+        );
+        assert_eq!(
+            classify_navigation(Some("https://example.com/"), "data:text/plain,hello", true),
             NavigationDisposition::Deny
         );
     }
