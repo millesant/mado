@@ -1,6 +1,6 @@
 use gtk::prelude::*;
 use relm4::{RelmApp, gtk, prelude::*};
-use webkit6::WebView;
+use webkit6::{WebView, prelude::WebViewExt};
 
 use crate::browser::window::chatgpt_web_view;
 
@@ -30,6 +30,11 @@ impl SimpleComponent for MadoApp {
         let model = MadoApp {
             web_view: chatgpt_web_view(),
         };
+        let web_view = model.web_view.clone();
+        root.connect_close_request(move |_| {
+            web_view.stop_loading();
+            gtk::glib::Propagation::Proceed
+        });
         let widgets = view_output!();
 
         ComponentParts { model, widgets }
