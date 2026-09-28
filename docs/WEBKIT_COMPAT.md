@@ -24,6 +24,15 @@ This document records durable compatibility findings. GitHub Issues track active
 - A temporary local compatibility probe confirmed an explicit `data:` download also completed successfully and wrote the expected file contents.
 - No native synthetic-download bridge is required for the tested `blob:` / `data:` paths. Final download progress/history UI remains out of scope for this compatibility gate.
 
+### Fedora 44 media smoke — issue #8
+
+- Same Fedora 44 / GTK 4.22.5 / WebKitGTK 2.54.0 / KDE Wayland host.
+- ChatGPT microphone capture triggered Mado's native permission prompt and worked after explicit approval; spoken input was transcribed/sent successfully before the experimental WebRTC toggle was tried.
+- Full ChatGPT Voice mode failed with `Voice couldn't connect`.
+- WebKitGTK 2.54 defaults `enable-media-stream` to true and `enable-webrtc` to false. Explicitly enabling `enable-webrtc` did not make full Voice connect and regressed the working dictation path, so that change was reverted.
+- The host exposes GStreamer WebRTC, Opus, SCTP, DTLS, and PipeWire audio elements. The remaining full-Voice incompatibility is tracked in #26.
+- No reachable camera flow was exercised in this smoke test. Media grants are not persisted by Mado in P0, so a later request/restart can prompt again.
+
 ## Gate matrix
 
 | Capability | Required for P0 exit | Current state | Evidence |
@@ -38,9 +47,9 @@ This document records durable compatibility findings. GitHub Issues track active
 | file upload | yes | Verified | Fedora 44 transfer smoke; local text file uploaded and was readable by ChatGPT |
 | normal file download | yes | Verified | Fedora 44 transfer smoke; generated text file saved to the normal Downloads directory |
 | generated `blob:`/`data:` download feasibility | yes | Verified | Real ChatGPT `blob:` download and explicit `data:` probe both completed directly through WebKitGTK |
-| microphone permission | yes | Unverified | |
-| voice input / relevant WebRTC path | yes | Unverified | |
-| camera permission where ChatGPT requests it | no | Unverified | |
+| microphone permission | yes | Verified | Fedora 44 media smoke; native Mado prompt appeared and approved microphone capture worked |
+| voice input / relevant WebRTC path | yes | Known limitation | Basic dictation worked; full ChatGPT Voice mode could not connect on WebKitGTK 2.54.0 and is tracked in #26 |
+| camera permission where ChatGPT requests it | no | Not exercised | No reachable camera flow was exposed during the issue #8 smoke test |
 | external links can hand off to system browser | yes | Unverified | |
 | Wayland smoke | yes | Unverified | |
 | X11 smoke | yes | Unverified | |
