@@ -1,11 +1,52 @@
-use webkit6::{WebView, prelude::WebViewExt};
+use relm4::gtk::{self, glib, prelude::*};
+use webkit6::{WebView, prelude::*};
+
+use super::navigation::{is_allowed_popup_target, is_trusted_popup_source};
 
 pub const CHATGPT_URL: &str = "https://chatgpt.com/";
 
 pub fn chatgpt_web_view() -> WebView {
     let web_view = WebView::new();
+    configure_popup_handling(&web_view);
     web_view.load_uri(CHATGPT_URL);
     web_view
+}
+
+fn configure_popup_handling(web_view: &WebView) {
+    web_view.connect_create(|parent, action| {
+        if !is_trusted_popup_source(parent.uri().as_deref()) {
+            return None;
+        }
+        let target = action.request().and_then(|request| request.uri());
+        if !target.as_deref().is_some_and(is_allowed_popup_target) {
+            return None;
+        }
+
+        let popup = WebView::builder().related_view(parent).build();
+        configure_popup_handling(&popup);
+
+        let window = gtk::ApplicationWindow::builder()
+            .application(&relm4::main_application())
+            .title("Mado — Sign in")
+            .default_width(900)
+            .default_height(700)
+            .build();
+        window.set_child(Some(&popup));
+
+        let ready_window = window.clone();
+        popup.connect_ready_to_show(move |_| ready_window.present());
+
+        let close_window = window.clone();
+        popup.connect_close(move |_| close_window.close());
+
+        let closing_popup = popup.clone();
+        window.connect_close_request(move |_| {
+            closing_popup.stop_loading();
+            glib::Propagation::Proceed
+        });
+
+        Some(popup.upcast())
+    });
 }
 
 #[cfg(test)]

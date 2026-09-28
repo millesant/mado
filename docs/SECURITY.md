@@ -24,6 +24,8 @@ Deleting a profile must delete only that profile's owned data.
 
 Maintain an explicit trusted-origin policy for ChatGPT/OpenAI authentication flows.
 
+WebKit new-window requests may create an in-app child view only when the opener is an HTTPS ChatGPT/OpenAI origin. The initial child target must be HTTPS (or `about:blank` while WebKit bootstraps the popup), and the child must use WebKit's related-view relationship so authentication state remains WebKit-owned and shared with its opener.
+
 Ordinary external links should open through the system browser unless an issue deliberately defines in-app handling.
 
 Unknown custom schemes must not be blindly launched.
