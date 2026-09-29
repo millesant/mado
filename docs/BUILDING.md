@@ -21,11 +21,17 @@ sudo dnf install rust cargo pkgconf-pkg-config gtk4-devel webkitgtk6.0-devel
 From the repository root:
 
 ```bash
+cargo fmt --check
 cargo check
 cargo test
+node --check src/web/scripts/bootstrap.js
+node --check src/web/scripts/draft.js
+node src/web/scripts/bootstrap.test.js
+node src/web/scripts/draft.test.js
+./scripts/check-privacy.sh
 ```
 
-To launch the shell:
+To launch Mado:
 
 ```bash
 cargo run
@@ -44,9 +50,9 @@ MADO_PROFILE=profile-b cargo run
 
 Profile IDs are lowercase ASCII path-safe identifiers using letters, digits, `-`, and `_`, with a maximum length of 64 characters. If `MADO_PROFILE` is unset, Mado uses `default`.
 
-P1 profile storage starts in new per-profile XDG directories. The earlier P0 test store at the Mado data/cache root is deliberately not copied automatically, so the first P1 run of `default` may require signing in again. The legacy files are left untouched rather than copied while a WebKit helper might still hold them open.
+The environment variable is a temporary development selector until the native profile/settings UI in #18 replaces it.
 
-Other Linux distributions may work, but this phase only claims the Fedora baseline after it is actually validated.
+Other Linux distributions may work, but the repository currently claims only the Fedora baseline that has been manually validated. Linux CI may use another distribution as a build/test environment without expanding the supported-runtime claim.
 
 ## GTK binding baseline
 

@@ -8,39 +8,18 @@
 *.local
 *.pem
 *.p12
-*.mobileprovision
-
-# Cookie/session export files (not source code)
 *cookie*.json
 *cookies*.json
 *session*.json
 *token*.json
 *secret*.json
 
-# Build outputs and generated desktop bundles
+# Rust/build outputs
+target/
 dist/
 build/
-*.dmg
-*.app/
 
-# Swift
-swift/.build/
-swift/.swiftpm/
-swift/dist/
-
-# Node / Tauri / Rust
-target/
-tauri/node_modules/
-tauri/dist/
-tauri/backups/
-tauri/src-tauri/target/
-
-# OpenCode memory (not part of the project)
+# Local editor/agent artifacts
 .opencode/
-
-# Audit process artifacts
 REPORT.md
 ground-truth.txt
-cloak/packaging/cloakbrowser-current.sha256
-cloak/selftest/last-result.json
-cloak/selftest/live-results/

@@ -1,8 +1,6 @@
-# WebKitGTK compatibility gate
+# WebKitGTK compatibility
 
-The Linux port does not proceed to broad feature work until the WebKitGTK 6 path is proven viable for current ChatGPT Web behavior.
-
-This document records durable compatibility findings. GitHub Issues track active work.
+This document records durable compatibility findings for the WebKitGTK 6 path used by Mado. The initial P0 gate is complete; GitHub Issues track current compatibility work and regressions.
 
 ## Test environments
 
@@ -13,7 +11,7 @@ This document records durable compatibility findings. GitHub Issues track active
 - WebKitGTK 2.54.0
 - KDE on Wayland
 - Manual evidence: native Mado window opened, `https://chatgpt.com/` rendered to the signed-out ChatGPT UI, and closing the window returned to the shell with no lingering Mado/WebKit helper process.
-- One credential-socket `Broken pipe` warning was observed during shutdown on this host; after commit `1de52c2`, the repeated WebKit `internallyFailedLoadTimerFired()` shutdown errors no longer occurred.
+- Native Mado/WebKit helper processes terminate after window close. Authenticated teardown can still emit delayed WebKitGTK stderr diagnostics after process exit; that separate runtime defect remains tracked in #24.
 
 ### Fedora 44 transfer smoke — issue #7
 
@@ -22,12 +20,12 @@ This document records durable compatibility findings. GitHub Issues track active
 - A ChatGPT-generated text file downloaded successfully to the user's normal Downloads directory using WebKitGTK's built-in download behavior.
 - Temporary scheme-only instrumentation confirmed the real ChatGPT-generated download used a `blob:` URL and completed successfully.
 - A temporary local compatibility probe confirmed an explicit `data:` download also completed successfully and wrote the expected file contents.
-- No native synthetic-download bridge is required for the tested `blob:` / `data:` paths. Final download progress/history UI remains out of scope for this compatibility gate.
+- No JavaScript/base64 synthetic-download bridge is required for the tested `blob:` / `data:` paths. P1 issue #14 later promoted trusted user-gesture `blob:` / `data:` navigation decisions into WebKit's native `Download` pipeline so progress, failure handling, safe filenames, and partial-file finalization use one controller.
 
 ### Fedora 44 media smoke — issue #8
 
 - Same Fedora 44 / GTK 4.22.5 / WebKitGTK 2.54.0 / KDE Wayland host.
-- ChatGPT microphone capture triggered Mado's native permission prompt and worked after explicit approval; spoken input was transcribed/sent successfully before the experimental WebRTC toggle was tried.
+- The initial issue #8 smoke observed ChatGPT microphone dictation working after Mado's native permission prompt and explicit approval, before the experimental WebRTC toggle was tried. Treat that as historical compatibility evidence, not a guarantee of current dictation behavior without a fresh retest.
 - Full ChatGPT Voice mode failed with `Voice couldn't connect`.
 - WebKitGTK 2.54 defaults `enable-media-stream` to true and `enable-webrtc` to false. Explicitly enabling `enable-webrtc` did not make full Voice connect and regressed the working dictation path, so that change was reverted.
 - Upstream WebKitGTK 2.54 release notes state that WebRTC support is disabled in 2.54 while the GStreamer backend is being replaced by a LibWebRTC implementation expected in the next release cycle. This explains why forcing the runtime setting cannot make ChatGPT Voice viable on this build. Reference: https://webkitgtk.org/2026/09/16/webkitgtk-2.54-highlights.html
@@ -57,7 +55,7 @@ This document records durable compatibility findings. GitHub Issues track active
 
 | Capability | Required for P0 exit | Current state | Evidence |
 |---|---:|---|---|
-| launch native GTK/Relm4 shell | yes | Verified | Fedora 44 host smoke above; clean process exit after `1de52c2` |
+| launch native GTK/Relm4 shell | yes | Verified | Fedora 44 host smoke plus #12 lifecycle smoke; closing leaves no Mado/WebKit helper processes, while #24 separately tracks delayed WebKit stderr diagnostics |
 | load `https://chatgpt.com` | yes | Verified | Fedora 44 host smoke above; current signed-out ChatGPT UI rendered in WebKitGTK 6 |
 | interactive login | yes | Verified | Fedora 44 smoke; Google sign-in completed |
 | session persists after restart | yes | Verified | Fedora 44 smoke; signed-in state remained across multiple restarts |
@@ -68,17 +66,13 @@ This document records durable compatibility findings. GitHub Issues track active
 | normal file download | yes | Verified | Fedora 44 transfer smoke; generated text file saved to the normal Downloads directory |
 | generated `blob:`/`data:` download feasibility | yes | Verified | Real ChatGPT `blob:` download and explicit `data:` probe both completed directly through WebKitGTK |
 | microphone permission | yes | Verified | Fedora 44 media smoke; native Mado prompt appeared and approved microphone capture worked |
-| voice input / relevant WebRTC path | yes | Known limitation | Basic dictation worked; full ChatGPT Voice mode could not connect on WebKitGTK 2.54.0 and is tracked in #26 |
+| voice input / relevant WebRTC path | yes | Known limitation | Initial #8 dictation smoke worked, but current dictation support requires retest; full ChatGPT Voice could not connect on WebKitGTK 2.54.0 and is tracked in #26 |
 | camera permission where ChatGPT requests it | no | Not exercised | No reachable camera flow was exposed during the issue #8 smoke test |
 | external links can hand off to system browser | yes | Verified | Fedora 44 external-link smoke; third-party HTTPS opened in the existing system browser session while Mado stayed on ChatGPT |
 | Wayland smoke | yes | Verified | Fedora 44 KDE Wayland host used throughout P0 interactive testing without immediate chat layout/input corruption |
 | X11 smoke | yes | Verified | Fedora 44 KDE XWayland (`GDK_BACKEND=x11`, `DISPLAY=:0`) multi-turn chat smoke passed |
-| page recovery after WebKit/load failure | no | Unverified | |
+| page recovery after WebKit/load failure | no | Verified | #13 forced-load-failure smoke showed explicit native reload recovery; forced WebProcess termination recovered automatically once without a retry loop |
 
-## P0 exit rule
+## Compatibility evidence rule
 
-P0 may exit when every required row is either:
-- verified working with reproducible evidence; or
-- documented as a known limitation with an accepted product decision and an issue describing the fallback/mitigation.
-
-Do not mark a row verified from API availability alone. It requires an actual build/test result on Linux.
+A capability is only recorded as verified when it has an actual Linux build/test result. API availability alone is not evidence of runtime compatibility. Known limitations stay explicit and link back to their GitHub issue when follow-up work remains.

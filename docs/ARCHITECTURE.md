@@ -22,51 +22,25 @@ Wayland is first-class. X11 compatibility is maintained where reasonable.
 6. Prefer explicit small modules over framework-heavy abstraction.
 7. Do not duplicate workflow state in repository files.
 
-## Target layout
+## Current layout
 
 ```text
 src/
 ├── main.rs
 ├── application.rs
-├── browser/
-│   ├── mod.rs
-│   ├── window.rs
-│   ├── navigation.rs
-│   ├── permissions.rs
-│   ├── recovery.rs
-│   └── state.rs
-├── web/
-│   ├── mod.rs
-│   ├── bridge.rs
-│   ├── selectors.rs
-│   └── scripts/
-├── profiles/
-│   ├── mod.rs
-│   ├── model.rs
-│   └── storage.rs
-├── downloads/
-├── notifications/
-├── settings/
-├── diagnostics/
-├── privacy/
-└── platform/
-    ├── xdg.rs
-    └── portals.rs
+├── browser/       WebKit window/session/navigation/permissions/recovery
+├── web/           isolated bridge, selectors, injected scripts
+├── profiles/      profile identity and XDG-backed storage
+├── drafts/        local unsent-draft persistence/recovery
+├── downloads/     native download state and safe filesystem handling
+└── platform/      Linux/XDG integration
 
-data/
-├── io.github.Millesant.Mado.desktop
-├── io.github.Millesant.Mado.metainfo.xml
-└── icons/
-
-packaging/
-├── flatpak/
-├── rpm/
-└── deb/
-
-tests/
+docs/               durable architecture/security/build/compatibility notes
+scripts/            repository validation helpers
+reference/swift/    read-only upstream behavior retained for remaining P2 work
 ```
 
-The exact module split may evolve, but the boundaries above should remain recognizable.
+Notification, settings/profile-management, diagnostics/privacy, and packaging modules are added only when their GitHub issues are implemented. Do not create placeholder architecture solely to match an aspirational tree.
 
 ## Runtime boundaries
 
@@ -125,6 +99,8 @@ $XDG_DATA_HOME/mado/profiles/<id>/
 ├── cookies.sqlite
 └── webkit/
 $XDG_STATE_HOME/mado/profiles/<id>/
+├── window-state
+└── drafts.json
 $XDG_CACHE_HOME/mado/profiles/<id>/
 └── webkit/
 ```
@@ -175,7 +151,6 @@ The compatibility gate is tracked in `docs/WEBKIT_COMPAT.md`.
 
 ## Distribution
 
-Primary distribution target: Flatpak.
-Additional targets: Fedora/RPM and Debian/DEB.
+Mado does not have a finalized packaged release yet. Current development runs from source.
 
-Packaging must not silently bundle Chromium or switch browser engines.
+Future packaging should use standard Linux channels (with Flatpak, RPM, and DEB evaluated when packaging work begins) and must not silently bundle Chromium or switch browser engines.

@@ -25,18 +25,10 @@ run_git_grep() {
   if [[ -n "$rev" ]]; then
     git grep -I -n -E "$PATTERN" "$rev" -- \
       . \
-      ':(exclude)cloak/target' \
-      ':(exclude)cloak/cloak-picker/node_modules' \
-      ':(exclude)tauri/node_modules' \
-      ':(exclude)swift/.build' \
       ':(exclude).git' || true
   else
     git grep -I -n -E "$PATTERN" -- \
       . \
-      ':(exclude)cloak/target' \
-      ':(exclude)cloak/cloak-picker/node_modules' \
-      ':(exclude)tauri/node_modules' \
-      ':(exclude)swift/.build' \
       ':(exclude).git' || true
   fi
 }

@@ -1,0 +1,48 @@
+name: Linux CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Rust and web integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y             libgtk-4-dev             libwebkitgtk-6.0-dev             pkg-config
+
+      - name: Install Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup component add rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Check Rust
+        run: cargo check
+
+      - name: Run Rust tests
+        run: cargo test
+
+      - name: Validate web-integration scripts
+        run: |
+          node --check src/web/scripts/bootstrap.js
+          node --check src/web/scripts/draft.js
+          node src/web/scripts/bootstrap.test.js
+          node src/web/scripts/draft.test.js
+
+      - name: Check repository privacy guard
+        run: ./scripts/check-privacy.sh

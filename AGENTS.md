@@ -12,9 +12,9 @@ Use:
 
 Do not introduce Electron, Chromium, Tauri, Qt WebEngine, or another bundled browser runtime unless the user explicitly changes the product direction.
 
-The upstream `swift/` implementation is the primary behavioral reference. Reimplement behavior idiomatically for Linux; do not mechanically translate Swift.
+The retained upstream Swift files under `reference/swift/` are the primary behavioral reference for the remaining parity work. Reimplement behavior idiomatically for Linux; do not mechanically translate Swift.
 
-Until an explicit cleanup issue says otherwise, keep `swift/` and `tauri/` as reference material.
+`reference/swift/` is read-only reference material, not a build target. Keep only files that are materially useful to active or upcoming parity issues; historical files remain available through Git history.
 
 ## Sources of truth
 
