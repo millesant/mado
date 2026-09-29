@@ -10,7 +10,7 @@ const template = fs.readFileSync(
 const source = template
   .replaceAll(
     "__MADO_COMPOSER_SELECTOR__",
-    JSON.stringify('#prompt-textarea,textarea[data-testid="prompt-textarea"],[contenteditable="true"][data-testid="prompt-textarea"]'),
+    JSON.stringify('#prompt-textarea,textarea[data-testid="prompt-textarea"],[contenteditable="true"][data-testid="prompt-textarea"],[role="textbox"][contenteditable="true"]'),
   )
   .replaceAll("__MADO_MAX_DRAFT_CHARACTERS__", "200000");
 

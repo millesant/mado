@@ -90,7 +90,7 @@ Injected scripts live as separate files under `web/scripts/` so their source and
 ### Draft recovery
 `drafts/` owns profile-local unsent composer recovery. Drafts are stored in `$XDG_STATE_HOME/mado/profiles/<id>/drafts.json` (with the normal XDG fallback), keyed by a validated ChatGPT page path such as `/c/<conversation>`. The profile directory supplies the profile isolation boundary; no global draft store is shared between profiles.
 
-`web/scripts/draft.js` observes only the known prompt composer. Input/change events are debounced for 350 ms, and a temporary bounded MutationObserver is used only to locate the composer during page bootstrap. Auth-like and Cloudflare challenge pages do not install/emit draft observation while `observersAllowed()` is false.
+`web/scripts/draft.js` observes only the centralized prompt-composer selector set. It covers both the older `#prompt-textarea` / `data-testid="prompt-textarea"` forms and the current live `[role="textbox"][contenteditable="true"]` form seen on ChatGPT; this selector set remains isolated in `web/selectors.rs` because the DOM is volatile. Input/change events are debounced for 350 ms, and a temporary bounded MutationObserver is used only to locate the composer during page bootstrap. Auth-like and Cloudflare challenge pages do not install/emit draft observation while `observersAllowed()` is false.
 
 Page-originated events may save a non-empty draft but never delete one. Native restore is explicit: a GTK bar appears only when a saved draft exists and the current composer reports empty, and insertion occurs only after the user clicks **Restore draft**. The restore script rechecks page identity and composer emptiness, dispatches input/change events, and never submits the prompt.
 

@@ -363,6 +363,7 @@ mod tests {
         assert!(!draft.contains("__MADO_COMPOSER_SELECTOR__"));
         assert!(!draft.contains("__MADO_MAX_DRAFT_CHARACTERS__"));
         assert!(draft.contains("#prompt-textarea"));
+        assert!(draft.contains(r#"[role=\"textbox\"][contenteditable=\"true\"]"#));
         assert!(draft.contains(&MAX_DRAFT_CHARACTERS.to_string()));
         assert!(draft.contains("draft_changed"));
         assert!(draft.contains("draft_restore_result"));
