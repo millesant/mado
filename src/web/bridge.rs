@@ -3,14 +3,17 @@ use std::{error::Error, fmt};
 use serde::Deserialize;
 use webkit6::{UserContentInjectedFrames, UserContentManager, UserScript, UserScriptInjectionTime};
 
-use super::selectors::CLOUDFLARE_CHALLENGE_SELECTOR;
+use crate::drafts::store::MAX_DRAFT_CHARACTERS;
+
+use super::selectors::{CLOUDFLARE_CHALLENGE_SELECTOR, PROMPT_COMPOSER_SELECTOR};
 
 pub(crate) const BRIDGE_PROTOCOL_VERSION: u16 = 1;
-pub(crate) const MAX_MESSAGE_BYTES: usize = 16 * 1024;
+pub(crate) const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
+pub(crate) const BRIDGE_WORLD_NAME: &str = "mado-web-integration-v1";
 
 const BRIDGE_HANDLER_NAME: &str = "mado";
-const BRIDGE_WORLD_NAME: &str = "mado-web-integration-v1";
 const BOOTSTRAP_SOURCE: &str = include_str!("scripts/bootstrap.js");
+const DRAFT_SOURCE: &str = include_str!("scripts/draft.js");
 const TRUSTED_SCRIPT_ORIGINS: &[&str] = &[
     "https://chatgpt.com/*",
     "https://*.chatgpt.com/*",
@@ -27,11 +30,35 @@ pub(crate) enum PageKind {
     Blocked,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum DraftRestoreReason {
+    Restored,
+    Blocked,
+    PageChanged,
+    InvalidDraft,
+    ComposerMissing,
+    ComposerNotEmpty,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BridgeMessage {
     Ready {
         page: PageKind,
         observers_allowed: bool,
+    },
+    DraftReady {
+        path: String,
+        composer_empty: bool,
+    },
+    DraftChanged {
+        path: String,
+        text: String,
+    },
+    DraftRestoreResult {
+        path: String,
+        restored: bool,
+        reason: DraftRestoreReason,
     },
 }
 
@@ -86,18 +113,29 @@ struct BridgeReadyPayload {
     observers_allowed: bool,
 }
 
-pub(crate) fn create_user_content_manager() -> Result<UserContentManager, BridgeSetupError> {
-    create_user_content_manager_with_handler(|message| match message {
-        BridgeMessage::Ready {
-            page,
-            observers_allowed,
-        } => {
-            let _ = (page, observers_allowed);
-        }
-    })
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DraftReadyPayload {
+    path: String,
+    composer_empty: bool,
 }
 
-fn create_user_content_manager_with_handler<F>(
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DraftChangedPayload {
+    path: String,
+    text: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DraftRestoreResultPayload {
+    path: String,
+    restored: bool,
+    reason: DraftRestoreReason,
+}
+
+pub(crate) fn create_user_content_manager<F>(
     on_message: F,
 ) -> Result<UserContentManager, BridgeSetupError>
 where
@@ -120,16 +158,20 @@ where
         }
     });
 
-    let source = render_bootstrap_script();
-    let script = UserScript::for_world(
-        &source,
-        UserContentInjectedFrames::TopFrame,
-        UserScriptInjectionTime::Start,
-        BRIDGE_WORLD_NAME,
-        TRUSTED_SCRIPT_ORIGINS,
-        &[],
-    );
-    manager.add_script(&script);
+    for (source, injection_time) in [
+        (render_bootstrap_script(), UserScriptInjectionTime::Start),
+        (render_draft_script(), UserScriptInjectionTime::End),
+    ] {
+        let script = UserScript::for_world(
+            &source,
+            UserContentInjectedFrames::TopFrame,
+            injection_time,
+            BRIDGE_WORLD_NAME,
+            TRUSTED_SCRIPT_ORIGINS,
+            &[],
+        );
+        manager.add_script(&script);
+    }
 
     Ok(manager)
 }
@@ -148,15 +190,42 @@ pub(crate) fn parse_message(raw: &str) -> Result<BridgeMessage, MessageParseErro
 
     match envelope.kind.as_str() {
         "bridge_ready" => {
-            let payload: BridgeReadyPayload = serde_json::from_value(envelope.payload)
-                .map_err(|_| MessageParseError::InvalidPayload)?;
+            let payload: BridgeReadyPayload = parse_payload(envelope.payload)?;
             Ok(BridgeMessage::Ready {
                 page: payload.page,
                 observers_allowed: payload.observers_allowed,
             })
         }
+        "draft_ready" => {
+            let payload: DraftReadyPayload = parse_payload(envelope.payload)?;
+            Ok(BridgeMessage::DraftReady {
+                path: payload.path,
+                composer_empty: payload.composer_empty,
+            })
+        }
+        "draft_changed" => {
+            let payload: DraftChangedPayload = parse_payload(envelope.payload)?;
+            Ok(BridgeMessage::DraftChanged {
+                path: payload.path,
+                text: payload.text,
+            })
+        }
+        "draft_restore_result" => {
+            let payload: DraftRestoreResultPayload = parse_payload(envelope.payload)?;
+            Ok(BridgeMessage::DraftRestoreResult {
+                path: payload.path,
+                restored: payload.restored,
+                reason: payload.reason,
+            })
+        }
         _ => Err(MessageParseError::UnknownType),
     }
+}
+
+fn parse_payload<T: for<'de> Deserialize<'de>>(
+    payload: serde_json::Value,
+) -> Result<T, MessageParseError> {
+    serde_json::from_value(payload).map_err(|_| MessageParseError::InvalidPayload)
 }
 
 fn render_bootstrap_script() -> String {
@@ -172,12 +241,24 @@ fn render_bootstrap_script() -> String {
         .replace("__MADO_CLOUDFLARE_SELECTOR__", &selector)
 }
 
+fn render_draft_script() -> String {
+    let selector = serde_json::to_string(PROMPT_COMPOSER_SELECTOR)
+        .expect("static prompt composer selector should serialize");
+
+    DRAFT_SOURCE
+        .replace("__MADO_COMPOSER_SELECTOR__", &selector)
+        .replace(
+            "__MADO_MAX_DRAFT_CHARACTERS__",
+            &MAX_DRAFT_CHARACTERS.to_string(),
+        )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn parses_known_versioned_message() {
+    fn parses_known_versioned_messages() {
         assert_eq!(
             parse_message(
                 r#"{"v":1,"type":"bridge_ready","payload":{"page":"app","observers_allowed":true}}"#
@@ -185,6 +266,34 @@ mod tests {
             Ok(BridgeMessage::Ready {
                 page: PageKind::App,
                 observers_allowed: true,
+            })
+        );
+        assert_eq!(
+            parse_message(
+                r#"{"v":1,"type":"draft_ready","payload":{"path":"/c/example","composer_empty":true}}"#
+            ),
+            Ok(BridgeMessage::DraftReady {
+                path: "/c/example".into(),
+                composer_empty: true,
+            })
+        );
+        assert_eq!(
+            parse_message(
+                r#"{"v":1,"type":"draft_changed","payload":{"path":"/c/example","text":"hello"}}"#
+            ),
+            Ok(BridgeMessage::DraftChanged {
+                path: "/c/example".into(),
+                text: "hello".into(),
+            })
+        );
+        assert_eq!(
+            parse_message(
+                r#"{"v":1,"type":"draft_restore_result","payload":{"path":"/c/example","restored":false,"reason":"composer_not_empty"}}"#
+            ),
+            Ok(BridgeMessage::DraftRestoreResult {
+                path: "/c/example".into(),
+                restored: false,
+                reason: DraftRestoreReason::ComposerNotEmpty,
             })
         );
     }
@@ -203,7 +312,7 @@ mod tests {
         );
         assert_eq!(
             parse_message(
-                r#"{"v":1,"type":"bridge_ready","payload":{"page":"app","observers_allowed":true,"command":"shell"}}"#
+                r#"{"v":1,"type":"draft_changed","payload":{"path":"/","text":"hi","command":"shell"}}"#
             ),
             Err(MessageParseError::InvalidPayload)
         );
@@ -222,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_malformed_payloads_and_page_kinds() {
+    fn rejects_malformed_payloads_and_restore_reasons() {
         assert_eq!(
             parse_message(
                 r#"{"v":1,"type":"bridge_ready","payload":{"page":"unknown","observers_allowed":true}}"#
@@ -231,31 +340,39 @@ mod tests {
         );
         assert_eq!(
             parse_message(
-                r#"{"v":1,"type":"bridge_ready","payload":{"page":"app","observers_allowed":"yes"}}"#
+                r#"{"v":1,"type":"draft_restore_result","payload":{"path":"/","restored":false,"reason":"run_shell"}}"#
             ),
             Err(MessageParseError::InvalidPayload)
         );
     }
 
     #[test]
-    fn rendered_bootstrap_is_versioned_bounded_and_centralizes_challenge_selector() {
-        let source = render_bootstrap_script();
+    fn rendered_scripts_are_versioned_bounded_and_centralize_selectors() {
+        let bootstrap = render_bootstrap_script();
+        let draft = render_draft_script();
 
-        assert!(!source.contains("__MADO_BRIDGE_VERSION__"));
-        assert!(!source.contains("__MADO_MAX_MESSAGE_BYTES__"));
-        assert!(!source.contains("__MADO_CLOUDFLARE_SELECTOR__"));
-        assert!(source.contains(&format!("const VERSION = {BRIDGE_PROTOCOL_VERSION};")));
-        assert!(source.contains(&MAX_MESSAGE_BYTES.to_string()));
-        assert!(source.contains("observersAllowed"));
-        assert!(source.contains("challengeActive"));
-        assert!(source.contains("bridge_ready"));
+        assert!(!bootstrap.contains("__MADO_BRIDGE_VERSION__"));
+        assert!(!bootstrap.contains("__MADO_MAX_MESSAGE_BYTES__"));
+        assert!(!bootstrap.contains("__MADO_CLOUDFLARE_SELECTOR__"));
+        assert!(bootstrap.contains(&format!("const VERSION = {BRIDGE_PROTOCOL_VERSION};")));
+        assert!(bootstrap.contains(&MAX_MESSAGE_BYTES.to_string()));
+        assert!(bootstrap.contains("observersAllowed"));
+        assert!(bootstrap.contains("challengeActive"));
+        assert!(bootstrap.contains("bridge_ready"));
+
+        assert!(!draft.contains("__MADO_COMPOSER_SELECTOR__"));
+        assert!(!draft.contains("__MADO_MAX_DRAFT_CHARACTERS__"));
+        assert!(draft.contains("#prompt-textarea"));
+        assert!(draft.contains(&MAX_DRAFT_CHARACTERS.to_string()));
+        assert!(draft.contains("draft_changed"));
+        assert!(draft.contains("draft_restore_result"));
 
         for selector_piece in [
             ".cf-turnstile",
             "#challenge-stage",
             "challenges.cloudflare.com",
         ] {
-            assert!(source.contains(selector_piece));
+            assert!(bootstrap.contains(selector_piece));
         }
     }
 }

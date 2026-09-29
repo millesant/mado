@@ -54,6 +54,10 @@ impl ProfilePaths {
         self.state.join("window-state")
     }
 
+    pub(crate) fn draft_state_file(&self) -> PathBuf {
+        self.state.join("drafts.json")
+    }
+
     #[allow(dead_code)]
     pub(crate) fn remove_owned_data(&self) -> io::Result<()> {
         for path in [&self.config, &self.data, &self.state, &self.cache] {
@@ -125,6 +129,10 @@ mod tests {
         assert_eq!(
             paths.window_state_file(),
             root.join("state/profiles/work/window-state")
+        );
+        assert_eq!(
+            paths.draft_state_file(),
+            root.join("state/profiles/work/drafts.json")
         );
     }
 

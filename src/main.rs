@@ -1,6 +1,7 @@
 mod application;
 mod browser;
 mod downloads;
+mod drafts;
 mod platform;
 mod profiles;
 mod web;

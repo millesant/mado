@@ -16,7 +16,7 @@ It tracks architectural/behavioral parity only. GitHub Issues and the Project bo
 | ChatGPT DOM selectors / challenge guards | `web/selectors.rs` + feature scripts | P2 | volatile DOM knowledge remains inside web-integration boundary; auth/Cloudflare pages suppress observers |
 | isolated website data stores | `profiles/storage.rs` + profile-scoped `NetworkSession` | P1 | XDG-backed per-profile data/cache/cookies; no cross-profile fallback |
 | cookie-consent defaults | `privacy/` + web scripts | P2 | must not damage login/session |
-| draft preservation/recovery | `web/scripts/draft.js` + Rust store | P2 | no prompt auto-send |
+| draft preservation/recovery | `web/scripts/draft.js` + `drafts/` | P2 | profile/page-scoped XDG state, 350 ms capture debounce, explicit native restore only, existing composer text wins, no prompt auto-send |
 | completion detection | `web/scripts/completion.js` | P2 | DOM-dependent and isolated |
 | native completion notifications | `notifications/` | P2 | only when appropriate/unfocused |
 | normal downloads | `downloads/` | P0/P1 | profile `NetworkSession` download stream, safe `.part` → final promotion, native status |

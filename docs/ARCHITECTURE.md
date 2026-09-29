@@ -81,11 +81,18 @@ Owns page rendering, cookies, local storage, IndexedDB, service workers, media/W
 
 The P2 bridge uses one WebKit isolated script world (`mado-web-integration-v1`) and one named message handler. The bootstrap script is injected at document start into the top frame only, and WebKit's URI allow-list restricts injection to HTTPS ChatGPT/OpenAI origins. Related OAuth child WebViews share the parent's `UserContentManager`; third-party provider pages do not match the injection allow-list.
 
-The bridge protocol is explicitly versioned. JavaScript sends JSON strings with `v`, `type`, and a type-specific `payload`. Rust rejects messages larger than 16 KiB before JSON parsing, rejects unknown versions/types, and deserializes each payload into a closed schema. The bridge is an event/data channel, not a generic native command dispatcher.
+The bridge protocol is explicitly versioned. JavaScript sends JSON strings with `v`, `type`, and a type-specific `payload`. Rust rejects messages larger than 1 MiB before JSON parsing, rejects unknown versions/types, and deserializes each payload into a closed schema. Feature payloads keep tighter limits where practical; draft text is capped at 200,000 characters. The bridge is an event/data channel, not a generic native command dispatcher.
 
 `bootstrap.js` exposes only isolated-world helpers for later feature scripts: `pageKind()`, `observersAllowed()`, and bounded `post()`. DOM-dependent observers must check `observersAllowed()`; it becomes false on Cloudflare challenge pages and auth-like pages. The Cloudflare selector is centralized in `web/selectors.rs`.
 
 Injected scripts live as separate files under `web/scripts/` so their source and protocol version can be checked independently from native code.
+
+### Draft recovery
+`drafts/` owns profile-local unsent composer recovery. Drafts are stored in `$XDG_STATE_HOME/mado/profiles/<id>/drafts.json` (with the normal XDG fallback), keyed by a validated ChatGPT page path such as `/c/<conversation>`. The profile directory supplies the profile isolation boundary; no global draft store is shared between profiles.
+
+`web/scripts/draft.js` observes only the known prompt composer. Input/change events are debounced for 350 ms, and a temporary bounded MutationObserver is used only to locate the composer during page bootstrap. Auth-like and Cloudflare challenge pages do not install/emit draft observation while `observersAllowed()` is false.
+
+Page-originated events may save a non-empty draft but never delete one. Native restore is explicit: a GTK bar appears only when a saved draft exists and the current composer reports empty, and insertion occurs only after the user clicks **Restore draft**. The restore script rechecks page identity and composer emptiness, dispatches input/change events, and never submits the prompt.
 
 ### Profiles
 Each profile receives an isolated persistent WebKit data/cache boundary. Switching profiles must never merge cookie/local-storage state.

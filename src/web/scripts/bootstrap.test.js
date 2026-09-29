@@ -10,7 +10,7 @@ const template = fs.readFileSync(
 
 const source = template
   .replaceAll("__MADO_BRIDGE_VERSION__", "1")
-  .replaceAll("__MADO_MAX_MESSAGE_BYTES__", String(16 * 1024))
+  .replaceAll("__MADO_MAX_MESSAGE_BYTES__", String(1024 * 1024))
   .replaceAll("__MADO_CLOUDFLARE_SELECTOR__", JSON.stringify("[data-test-challenge]"));
 
 function loadBridge({
@@ -86,7 +86,7 @@ function loadBridge({
 {
   const { bridge, messages } = loadBridge();
   const posted = bridge.post("oversized_test", {
-    text: "x".repeat(20 * 1024),
+    text: "x".repeat(1024 * 1024 + 1),
   });
   assert.equal(posted, false);
   assert.equal(messages.length, 1);

@@ -16,14 +16,18 @@ pub const CHATGPT_URL: &str = "https://chatgpt.com/";
 
 pub fn chatgpt_web_view(
     paths: &crate::profiles::storage::ProfilePaths,
+    drafts: &crate::drafts::DraftController,
     downloads: &crate::downloads::DownloadController,
 ) -> WebView {
     let session = create_profile_network_session(paths)
         .expect("failed to initialize persistent WebKit profile storage");
     downloads.attach(&session);
 
-    let user_content_manager = crate::web::bridge::create_user_content_manager()
-        .expect("failed to initialize isolated web-integration bridge");
+    let draft_messages = drafts.clone();
+    let user_content_manager = crate::web::bridge::create_user_content_manager(move |message| {
+        draft_messages.handle_bridge_message(message);
+    })
+    .expect("failed to initialize isolated web-integration bridge");
     let web_view = WebView::builder()
         .network_session(&session)
         .user_content_manager(&user_content_manager)

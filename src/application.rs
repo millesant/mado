@@ -5,6 +5,7 @@ use crate::{
         window::{chatgpt_web_view, stop_app_web_views},
     },
     downloads::DownloadController,
+    drafts::DraftController,
     platform::xdg::XdgDirectories,
     profiles::{ProfileId, storage::ProfilePaths},
 };
@@ -42,13 +43,16 @@ impl SimpleComponent for MadoApp {
             WindowState::default()
         });
 
+        let drafts = DraftController::new(paths.draft_state_file());
         let downloads = DownloadController::new();
-        let web_view = chatgpt_web_view(&paths, &downloads);
+        let web_view = chatgpt_web_view(&paths, &drafts, &downloads);
+        drafts.attach_web_view(&web_view);
         let browser_widget = wrap_with_recovery(&web_view);
         browser_widget.set_vexpand(true);
 
         let root_widget = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root_widget.append(&browser_widget);
+        root_widget.append(&drafts.widget());
         root_widget.append(&downloads.widget());
 
         let model = MadoApp { root_widget };

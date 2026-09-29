@@ -35,9 +35,11 @@ Unknown/custom schemes are denied rather than blindly launched.
 
 Mado's WebKitGTK bridge is not exposed as a generic page-to-native command API. The registered handler lives in the isolated `mado-web-integration-v1` script world, and the bootstrap user script is injected into the top frame only with an HTTPS ChatGPT/OpenAI URI allow-list. This compensates for WebKitGTK's `script-message-received` callback not carrying Swift-style frame/security-origin metadata: ordinary page JavaScript and third-party OAuth provider pages do not receive the isolated-world handler.
 
-Bridge messages are UTF-8 JSON strings with an explicit protocol version, event type, and closed payload schema. Native parsing enforces a 16 KiB maximum before JSON decoding, rejects unknown versions and event types, and rejects extra or malformed payload fields. JavaScript applies the same byte limit before posting. The initial protocol exposes only the `bridge_ready` event; future features must add explicit typed events rather than an eval/shell/filesystem command mechanism.
+Bridge messages are UTF-8 JSON strings with an explicit protocol version, event type, and closed payload schema. Native parsing enforces a 1 MiB maximum before JSON decoding, rejects unknown versions and event types, and rejects extra or malformed payload fields. JavaScript applies the same byte limit before posting, while individual features apply tighter semantic limits such as the 200,000-character draft ceiling. The protocol exposes typed events only; it has no eval/shell/filesystem command mechanism.
 
-DOM selectors and injected scripts live only in `src/web/`. DOM observers must use the shared page guard: Cloudflare challenge pages and auth-like pages suppress incompatible observers. Never log raw bridge payloads, because future event payloads may contain user-derived page state.
+DOM selectors and injected scripts live only in `src/web/`. DOM observers must use the shared page guard: Cloudflare challenge pages and auth-like pages suppress incompatible observers. Never log raw bridge payloads, because draft events contain user-authored text.
+
+Draft files are profile-scoped application state, not WebKit session data. Page messages cannot clear saved drafts, restore requires a native user action, existing composer text wins over a saved draft, and restoration never triggers submit/send.
 
 ## Uploads and downloads
 
